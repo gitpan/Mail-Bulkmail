@@ -119,7 +119,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.07';
+$VERSION = '3.08';
 
 use Socket;
 use 5.6.0;
@@ -1905,14 +1905,14 @@ sub buildMessage {
 	#sendmail-ify our line breaks
 	$message =~ s/(?:\r?\n|\r\n?)/\015\012/g;
 
+	$message = $self->_force_wrap_string($message);
+
 	#double any periods that start lines
 	$message =~ s/^\./../gm;
 
 	#and force a CRLF at the end, unless one is already present
 	$message .= "\015\012" unless $message =~ /\015\012$/;
 	$message .= ".";
-
-	$message = $self->_force_wrap_string($message);
 
 	$self->_cached_message(\$message);
 	return \$message;

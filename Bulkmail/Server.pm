@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.07';
+$VERSION = '3.08';
 
 use Socket;
 use 5.6.0;

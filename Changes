@@ -1,5 +1,11 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.08 Sat Mar 29, 2003
+	- Damn this makes me mad. Turns out I was doubling periods and *then* wrapping the message.
+	  In some unlikely circumstances, that could cause a lone period on a line in the middle of
+	  a message, which is, of course, bad. Now does doubling after wrapping.
+	  (thanks to Guy Matz for pointing this out!)
+
 3.07 Fri Mar 28, 2003
 	- Fixed a stupid little bug that should not have slipped by me.
 	  (thanks to Guy Matz for pointing this out!)
