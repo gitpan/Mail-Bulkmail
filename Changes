@@ -1,5 +1,15 @@
 Revision history for Perl extension Mail::Bulkmail.
 
+2.00  Fri Aug 11, 2000
+        - Re-wrote everything.  Literally _everything_.  Total re-write.  
+        - Added in support for dynamic messaging.
+        - Added in support for envelope sending.
+        - Added in ability to import lists from more sources.
+        - Mail::Bulkmail should now behave absolutely perfectly with -w and use strict.
+        - Did I mention that this is a ground-up re-write?  Your existing code will need
+          to be tweaked slightly to use the new module.
+
+
 1.11  Tue Nov 09, 1999
         - Banned addresses now checks entire address case
           insensitively instead of leaving the local part
@@ -46,4 +56,3 @@ Revision history for Perl extension Mail::Bulkmail.
 
 .90   Tue Aug 10, 1999
         - Initial "completed" release.  First release available to general public.
-
