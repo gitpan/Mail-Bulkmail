@@ -119,7 +119,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = $Mail::Bulkmail::Object::VERSION;
+$VERSION = '3.07';
 
 use Socket;
 use 5.6.0;

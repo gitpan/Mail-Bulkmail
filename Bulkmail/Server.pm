@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = $Mail::Bulkmail::Object::VERSION;
+$VERSION = '3.07';
 
 use Socket;
 use 5.6.0;
@@ -598,7 +598,7 @@ sub connect {
 
 	return $self if $self->connected();
 
-	return $self->error("Cannot connect to server - no Tries parameter set", "MBS017");
+	return $self->error("Cannot connect to server - no Tries parameter set", "MBS017") unless $self->Tries;
 
 	return $self->error("Cannot connect to worthless servers", "MBS001") unless $self->_not_worthless > 0;
 

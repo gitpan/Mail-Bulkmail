@@ -1,5 +1,10 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.07 Fri Mar 28, 2003
+	- Fixed a stupid little bug that should not have slipped by me.
+	  (thanks to Guy Matz for pointing this out!)
+	- broke the versio numbers back out into the individual modules, so CPAN wouldn't bitch
+
 3.06 Tue Mar 25, 2003
 	- No longer even attempts to connect to a server if you haven't specified the Tries parameter
 	- You can now change the text of the Message after bulkmailing or mailing
