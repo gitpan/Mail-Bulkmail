@@ -27,7 +27,7 @@ Jim Thomason, jim@jimandkoka.com (http://www.jimandkoka.com)
  ) || die Mail::Bulkmail->error();
 
  $bulk->bulkmail() || die $bulk->error;
- 
+
 Don't forget to set up your conf file!
 
 =head1 DESCRIPTION
@@ -49,11 +49,11 @@ I'm writing these docs for 3.00 in January of 2003. So I'm at least 3 major re-w
 But that's okay, because we're getting it done now.
 
 3.00 is about as backwards compatible to 2.00 as 2.00 is to 1.00. That is to say, sorta. I've
-tried to make a note of things where they changed, but I'm sure I missed things. Some things can 
+tried to make a note of things where they changed, but I'm sure I missed things. Some things can
 no longer be done, lots are done differently, some are the same. You will need to change your code
 to update from 1.x or 2.x to 3.00, though. That's a given.
 
-So what's new for 3.00? Lots of stuff. 
+So what's new for 3.00? Lots of stuff.
 
 Immediate changes are:
 
@@ -63,7 +63,7 @@ Immediate changes are:
 
 The immediate change is that the code is now compartmentalized.
 Mail::Bulkmail now just handles ordinary, non-dynamic mailings. See Mail::Bulkmail::Dynamic for the
-merging and dynamic text abilities from the prior versions. 
+merging and dynamic text abilities from the prior versions.
 
 Server connections are no longer handled directly in Mail::Bulkmail (Smtp attribute, Port attribute,
 etc.), there is now a separate Mail::Bulkmail::Server object to handle all of that.
@@ -96,17 +96,16 @@ at the top of the module. To specify a universal conf file, put it in that array
 Alternatively, you can also add a conf_file via the conf_files accessor.
 
  Mail::Bulkmail->conf_files('/path/to/conf_file', '/path/to/other/conf_file');	#, etc.
- 
+
 But the recommended way is to specify your conf file upon module import.
 
  use Mail::Bulkmail 3.00 "/path/to/conf/file";
 
- 
-In addition, there is the usual plethora of bug fixes, tweaks, clean-ups, and so on. 
+In addition, there is the usual plethora of bug fixes, tweaks, clean-ups, and so on.
 
 And yes, the horrid long-standing bug in the Tz method is B<fixed!> No, honest.
 
-I'm also trying a new documentation technique. The pod for a given method is now in the module by that 
+I'm also trying a new documentation technique. The pod for a given method is now in the module by that
 method, as opposed to everything being bunched up at the bottom. Personally, I prefer everything being bunched
 up there for clarities sake. But from a maintenance point of view, spreading it all out makes my life much easier.
 
@@ -115,7 +114,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
  Perl 5.6.0, Socket
  (It probaly can get by with less than 5.6.0, but I haven't tested it in such an environment)
 
-=cut 
+=cut
 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
@@ -156,7 +155,7 @@ first tries to use the Sender as the Sender, and failing that, falls back on the
 
  $bulk->From('"Jim Thomason"<jim@jimandkoka.com>');
  print $bulk->From;
- 
+
 =cut
 
 __PACKAGE__->add_attr(["From",			'_email_accessor'], 0);
@@ -173,7 +172,7 @@ then the actual email address that we are currently on is used instead and ->To 
 
  $bulk->To('jimslist:;');
  print $bulk->To;
- 
+
 As of 3.00, ->To may contain either a valid email address or a valid group definition. A group definition is as follows
 (pseudo-regex):
 
@@ -184,7 +183,7 @@ i.e., "the group name", then a colon, then an optional list of email addresses, 
  $bulk->To('jim@jimandkoka.com');
  $bulk->To('MyList:jim@jimandkoka.com');
  $bulk->To('MyList:;');
- 
+
 Are all valid addresses. Only the ->To attribute may accept group syntax emails
 =cut
 
@@ -205,14 +204,14 @@ You should specify this, but if you don't then the From value is assumed to be t
 
  $bulk->Sender('jim@jimandkoka.com');
  print $bulk->Sender;
- 
+
 If this value is not set, then Mail::Bulkmail B<will> place a Sender header equal to the From value.
 
 Note that the ultimate receiving SMTP server is expected to place a Return-Path header in the message. This
 Return-Path value will be set to the value of the sender of the message, either ->Sender or ->From. This, in
 turn, will be the address that bounce backs go to. You should not set a Return-Path header yourself, because bad things
 will result.
- 
+
 =cut
 
 __PACKAGE__->add_attr(["Sender",		'_email_accessor'], 0);
@@ -231,7 +230,7 @@ Note that even though the attribute is "ReplyTo", the header set is "Reply-To"
 
  $bulk->ReplyTo('jim@jimandkoka.com');
  print $bulk->ReplyTo;
- 
+
 =cut
 
 __PACKAGE__->add_attr(["ReplyTo", 		'_email_accessor'], 0);
@@ -246,7 +245,7 @@ which will probably be ignored.
 
  $bulk->Subject("This is the list you signed up for");
  print $bulk->Subject;
- 
+
 =cut
 
 __PACKAGE__->add_attr("Subject");
@@ -259,8 +258,8 @@ __PACKAGE__->add_attr("_Precedence");
 # may have. It's stored as a hashref, and should be accessed via the ->header method.
 __PACKAGE__->add_attr('_headers');
 
-# internally stores the _cached_headers for a given message. This is populated by the 
-# buildHeaders() method during mailing. After the headers have been built once, then 
+# internally stores the _cached_headers for a given message. This is populated by the
+# buildHeaders() method during mailing. After the headers have been built once, then
 # buildHeaders returns the value in _cached_headers instead of constantly rebuilding them.
 #
 # _cached_headers is static if using the envelope. If not using the envelope, then the
@@ -280,11 +279,11 @@ A lot of people, though obviously not you, because you're reading the pod, just 
 to send HTML messages. It's easy.
 
  $bulk->header("Content-type", "text/html");
- 
+
 But it was just too hard for most people. So I added this flag.
 
 Here's the order:
- 
+
  Check and see if ->header("Content-type") is set, if so then send it.
  Otherwise, check and see if ->HTML is true, if so, then send a content-type of text/html
    i.e., an HTML message
@@ -307,7 +306,7 @@ Boolean flag. 1/0 only.
 use_envelope was the coolest thing I added to Bulkmail 2.00, and is arguably still the best thing I've got
 here in terms of raw power in your lists.
 
-Basically, it's like lasing a stick of dynamite. Mail::Bulkmail is fast. Mail::Bulkmail with use_envelope 
+Basically, it's like lasing a stick of dynamite. Mail::Bulkmail is fast. Mail::Bulkmail with use_envelope
 is mind-numbingly fast.
 
 For the uninformed, an email message contains two parts, the message itself and the envelope.   Mail servers only
@@ -329,7 +328,7 @@ so that we send all email to a domain in one burst, all of the email to another 
 on.  So you need to have all of your domains clustered together in your list.  If you don't, your list will still
 go out, but it will be a B<lot> slower, since Mail::Bulkmail has a fair amount more processing to do when you send
 with then envelope.  This is normally more than offset by the gains received from sending fewer messages.  But with
-an unsorted list, you never see the big gains and you see a major slow down.  Sort your lists. 
+an unsorted list, you never see the big gains and you see a major slow down.  Sort your lists.
 
  $bulk->use_envelope(0);
  print $bulk->use_envelope;
@@ -345,7 +344,7 @@ __PACKAGE__->add_attr('use_envelope');
 Boolean flag 1/0
 
 RFC 2822 recommends that all messages have no more than 80 characters in a line (78 + CRLF), but doesn't require it. if force80 is 1,
-then it will force a message to have only 80 characters per line. It will try to insert carriage returns between word boundaries, 
+then it will force a message to have only 80 characters per line. It will try to insert carriage returns between word boundaries,
 but if it can't, then it will cut words in half to force the limit.
 
 Regardless of force80, be warned that RFC 2822 mandates that messages must have no more than 1000 characters per line (998 + CRLF),
@@ -353,7 +352,7 @@ and that wrapping will be done no matter what. Again, it will try to wrap at wor
 in half to force the limit.
 
 It is recommended that you just have your message with at most 78 characters + CRLF for happiness' sake, and B<definitely> at most
-998 characters + CRLF. You may end up with extra CRLFs in your message that you weren't expecting. 
+998 characters + CRLF. You may end up with extra CRLFs in your message that you weren't expecting.
 
 If your message is not guaranteed to have only < 78 characters + CRLF per line, then it's recommended to have force80 on for
 full compatibility. Note that force80 will be overridden by ->Trusting('wrapping');
@@ -382,8 +381,8 @@ Okay, this is the first major change between 2.x and 3.x. 2.x had methods to con
 servers should contain an arrayref of server objects. You can either create them externally yourself and pass them in in an arrayref,
 
  $bulk->servers([\$server, \$server2, \$server3]);
- 
-or you can create them in your conf file. See the Mail::Bulkmail::Object for more info on the format of the conf file, and 
+
+or you can create them in your conf file. See the Mail::Bulkmail::Object for more info on the format of the conf file, and
 Mail::Bulkmail::Server for the attributes to specify.
 
 servers will automatically be populated with a list of all servers in the server_list in the conf file if you don't specify anything,
@@ -394,7 +393,7 @@ If you'd rather use a different server_file, then pass the server_file flag to t
  $bulk = Mail::Bulkmail->new(
  	'server_file' => '/path/to/server_file'
  );
- 
+
 That will B<override and ignore> the server_file in B<any> conf file, so use it with caution.
 
 Realistically, though, just let the program populate in the values of the servers you specified in the conf file and don't worry about
@@ -427,23 +426,150 @@ This stores the message that you will send out to the recipients of your list.
 
  $bulk->Message('Hi there. You're on my mailing list');
  print $bulk->Message;
- 
+
 Don't put any headers in your Message, since they won't be transmitted as headers. Instead they will show up in the body
 of your message text. Use the ->header method instead for additional headers
 
+This mutator is known to be able to return:
+
+ MB020 - could not open file for message
+ MB021 - could not close file for message
+ MB022 - invalid headers from message
+
 =cut
 
-__PACKAGE__->add_attr('Message');
+# The message is actually stored internally (_Message) and accessed via Message.
+# That way, if we change the message, we can be sure to wipe out the internal _cached_message as well
+__PACKAGE__->add_attr('_Message');
+
+sub Message {
+	my $self = shift;
+	$self->_cached_message(undef) if @_;
+
+	my @passed = @_;
+
+	if ($self->message_from_file) {
+
+		my $file = shift;
+		my $handle = $self->gen_handle;
+
+		my $message = undef;
+
+		open ($handle, $file) || return $self->error("Could not open file for message: $!", "MB020");
+
+		{
+			local $/ = undef;
+			$message = <$handle>;
+		}
+
+		close ($handle) || return $self->error("Could not close file for message: $!", "MB021");
+
+		unshift @passed, $message;
+	};
+
+	#first, wipe out any previously set headers_from_message
+	if (defined $self->_previous_headers_from_message) {
+		foreach my $header (@{$self->_previous_headers_from_message}){
+			$self->header($header, undef);
+		};
+	};
+
+	#wipe out the list of previously set headers
+	$self->_previous_headers_from_message([]);
+
+	#then, if we're setting new headers, we should set them.
+	if ($self->headers_from_message) {
+
+		#sendmail-ify our messages newlines
+		$passed[0] =~ s/(?:\r?\n|\r\n?)/\015\012/g;
+
+		my $header_string = undef;
+
+		#split out the header string and the message body
+		($header_string, $passed[0]) = split(/\015\012\015\012/, $passed[0], 2);
+
+		my ($last_header, $last_value) = ();
+		foreach (split/\015\012/, $header_string){
+			if (/:/){
+				if (defined $last_header && defined $last_value) {
+					#set our header
+					$self->header($last_header, $last_value)
+						|| return undef;	#bubble up the header error
+
+					#and wipe out the prior values
+					$last_header = $last_value = undef;
+				};
+				($last_header, $last_value) = split(/:/, $_, 2);
+				print "GOT ($last_header, $last_value)\n";
+				push @{$self->_previous_headers_from_message}, $last_header;
+			}
+			elsif (/^\s+/){
+				$last_value .= "\015\012$_";
+			}
+			else {
+				return $self->error("Invalid Headers from Message: line ($_)\n\n-->($header_string)", "MB022");
+			};
+		};
+
+		#clean up any headers that remain
+		if (defined $last_header && defined $last_value) {
+			#set our header
+			$self->header($last_header, $last_value)
+				|| return undef;	#bubble up the header error
+		};
+	};
+
+	return $self->_Message(@passed);
+};
 
 # internally stores the _cached_message for a given message. This is populated by the buildMessage()
 # method during mailing. After the message has been built once, then buildMessage returns the
 # value in _cached_message instead of constantly rebuilding it.
 __PACKAGE__->add_attr('_cached_message');
 
+=pod
+
+=item message_from_file
+
+boolean flag. 1/0 only.
+
+message_from_file allows you to load your message in from a file. If message_from_file is
+set to 1, then the value passed to ->Message() will be assumed to be a path to a file on disk.
+That file will be openned in read mode (if possible), read in, and stored as your message. Note
+that your entire message text will be read into memory - no matter how large the message may be.
+
+This is simply a shortcut so that you don't have to open and read in the message yourself.
+
+=cut
+
+__PACKAGE__->add_attr('message_from_file');
+
+=pod
+
+=item headers_from_message
+
+boolean flag. 1/0 only.
+
+headers_from_message allows you to specify mail headers inside your message body. You may
+still specify additional headers in the traditional manner.
+
+Note that if you change the value of ->Message (not recommended, but there are times you may
+want to do so), then any headers that were previously set via headers_from_message will be B<wiped out>.
+
+any headers specified in the message will be set when you call ->Message.
+
+=cut
+
+__PACKAGE__->add_attr('headers_from_message');
+
+#internal arrayref containing the headers set the last time ->Message was called.
+
+__PACKAGE__->add_attr("_previous_headers_from_message");
+
 # internal hashref that stores the list of duplicate email addresses populated by setDuplicate and
 # read by isDuplicate. WARNING - there is a *severe* penalty for using duplicates, this hash can
 # get really really huge. It is recommended you remove duplicates in advance and turn on
-# allow_duplicates to prevent this from being populated, if you do use it, then it 
+# allow_duplicates to prevent this from being populated, if you do use it, then it
 # is *strongly* recommended that you leave Trusting('banned') off, i.e. Trusting('banned' => 0)
 __PACKAGE__->add_attr('_duplicates');
 
@@ -463,22 +589,24 @@ LIST stores the list of addresses you're going to mail out to. LIST may be eithe
 If a string literal, then Mail::Bulkmail will attempt to open that file as your list:
 
  $bulk->LIST("/path/to/my/list");
- 
+
 If a globref, it is assumed to be an open filehandle:
 
  open (L, "/path/to/my/list");
  $bulk->LIST(\*L);
- 
+
 if a coderef, it is assumed to be a function to return your list, or undef when it is done:
 
  sub L {return $listquery->execute()};	#or whatever your code is
  $bulk->LIST(\&L);
- 
+
+The coderef will receive the bulkmail object itself as an argument.
+
 if an arrayref, it is assumed to be an array containing your list:
 
  my $list = [qw(jim@jimandkoka.com thomasoniii@yahoo.com)];
  $bulk->LIST($list);
- 
+
 Use whichever item is most convenient, and Mail::Bulkmail will take it from there.
 
 =cut
@@ -496,21 +624,24 @@ BAD may be either a coderef, globref, arrayref, or string literal.
 If a string literal, then Mail::Bulkmail will attempt to open that file (in append mode) as your log:
 
  $bulk->BAD("/path/to/my/bad.addresses");
- 
+
 If a globref, it is assumed to be an open filehandle in append mode:
 
  open (B, ">>/path/to/my/bad.addresses");
  $bulk->BAD(\*L);
- 
+
 if a coderef, it is assumed to be a function to call with the address as an argument:
 
  sub B { print "BAD ADDRESS : ", $_[1], "\n"};	#or whatever your code is
  $bulk->BAD(\&B);
- 
+
+The coderef will receive two arguments. The first is the bulkmail object itself, and the second
+is the data in the form that it was returned from the LIST attribute.
+
 if an arrayref, then bad addresses will be pushed on to the end of it
 
  $bulk->BAD(\@bad);
- 
+
 Use whichever item is most convenient, and Mail::Bulkmail will take it from there.
 
 =cut
@@ -528,21 +659,24 @@ GOOD may be either a coderef, globref, arrayref, or string literal.
 If a string literal, then Mail::Bulkmail will attempt to open that file (in append mode) as your log:
 
  $bulk->GOOD("/path/to/my/good.addresses");
- 
+
 If a globref, it is assumed to be an open filehandle in append mode:
 
  open (B, ">>/path/to/my/good.addresses");
  $bulk->GOOD(\*B);
- 
+
 if a coderef, it is assumed to be a function to call with the address as an argument:
 
  sub G { print "GOOD ADDRESS : ", $_[1], "\n"};	#or whatever your code is
  $bulk->GOOD(\&G);
- 
+
+The coderef will receive two arguments. The first is the bulkmail object itself, and the second
+is the data in the form that it was returned from the LIST attribute.
+
 if an arrayref, then bad addresses will be pushed on to the end of it
 
  $bulk->GOOD(\@good);
- 
+
 Use whichever item is most convenient, and Mail::Bulkmail will take it from there.
 
 Please note that ->GOOD only says that the address was initially accepted for delivery. It could later fail while transmitting
@@ -553,14 +687,13 @@ error logs to make sure no errors occurred, and look for (and weed out) bounces 
 
 __PACKAGE__->add_attr(['GOOD',		'_file_accessor'], '>>');
 
-
 #class attributes
 
 =pod
 
 =item server_class
 
-server_class is a class method that B<MUST> be specified in the conf file. You can initialize it in your program if you 
+server_class is a class method that B<MUST> be specified in the conf file. You can initialize it in your program if you
 really want, but it is B<strongly> recommended to be in the conf file so you don't forget it.
 
 server_class is used by the constructor to create the server list to populate into ->servers, ->servers is not
@@ -575,7 +708,7 @@ Also, if you write your own server implementation, this would be where you'd hoo
 
 __PACKAGE__->add_class_attr('server_class');
 
-#speciality accessors 
+#speciality accessors
 
 # _Trusting stores the hashref that is accessed internally by the Trusting method
 
@@ -599,13 +732,13 @@ Trusting values are set one as key/value pairs.
  $bulk->Trusting("email" => 1);
  $bulk->Trusting("wrapping" => 1);
  $bulk->Trusting("default" => 1);
- 
+
 And read back with just the key:
 
  $bulk->Trusting("email");
  $bulk->Trusting("wrapping");
  $bulk->Trusting("default");
- 
+
 default is used as a fall back. So if you didn't specify a Trusting value for "email", for example, it will use
 the "default" value. Note that the default is only used if a value is not specified.
 
@@ -633,22 +766,22 @@ use the list equation.
 
  # all Trusting
  Trusting = 1
- 
+
  #none Trusting
  Trusting = 0
- 
+
  #email is trusting
  Trusting @= email
  Trusting @= wrapping
- 
+
 This will not work:
 
  Trusting = email
- 
+
 If you use that syntax, it will internally do:
 
  $bulk->Trusting('email');
- 
+
 which you know will only read the value, not set it. If you use the array syntax, it will properly set the value.
 
 Note that ->Trusting('default' => 0) is not equivalent to ->Trusting(0). Consider:
@@ -672,7 +805,7 @@ Currently, you may set:
 It is recommended your conf file be:
 
  Trusting @= duplicates
- 
+
 Since you're usually better off weeding duplicates out in advance. All other Trusting values are recommended to be false.
 
 =cut
@@ -680,9 +813,9 @@ Since you're usually better off weeding duplicates out in advance. All other Tru
 sub Trusting {
 	my $self = shift;
 	my $key = shift;
-	
+
 	$self->_Trusting({}) unless $self->_Trusting;
-	
+
 	if (defined $key) {
 		if (ref $key eq "ARRAY"){
 			foreach my $k (@$key){
@@ -711,12 +844,11 @@ sub Trusting {
 	};
 };
 
-
 =pod
 
 =item banned
 
-banned stores the list of email addresses and domains that are banned. Only store user@domain.com portions of 
+banned stores the list of email addresses and domains that are banned. Only store user@domain.com portions of
 email addresses, don't try to ban "Jim"<jim@jimandkoka.com>, for instance. Only ban jim@jimandkoka.com
 
 banned may be either a coderef, globref, arrayref, or string literal.
@@ -724,7 +856,7 @@ banned may be either a coderef, globref, arrayref, or string literal.
 If a string literal, then Mail::Bulkmail will attempt to open that file (in append mode) as your log:
 
  $bulk->banned("/path/to/my/banned.addresses");
- 
+
 If a globref, it is assumed to be an open filehandle in append mode:
 
  open (B, ">>/path/to/my/banned.addresses");
@@ -741,15 +873,15 @@ if a coderef, it is assumed to be a function to return your banned list:
 
  sub B {return $bannedquery->execute()};	#or whatever your code is
  $bulk->banned(\&B);
- 
+
 The function should return one entry per execution, either an address or a domain.
- 
+
 if an arrayref, then it's an array of banned addresses and domains
 
  $bulk->banned([qw(jim@jimandkoka.com jimandkoka.com)]);
- 
+
 The arrayref can contain email addresses and domains.
- 
+
 Use whichever item is most convenient, and Mail::Bulkmail will take it from there.
 
 Once banned has been populated, the values are stored internally in a hashref.
@@ -758,10 +890,10 @@ Once banned has been populated, the values are stored internally in a hashref.
 
 sub banned {
 	my $self = shift;
-	
+
 	if (@_) {
 		my $banned = shift;
-		
+
 		#we're gonna cheat and populate the data into ->_banned via the _file_accessor.
 		#then we'll iterate through it all, pop it into a hash, and then drop
 		#that back into _banned instead
@@ -770,7 +902,7 @@ sub banned {
 		$self->_file_accessor("_banned", "<", $banned);
 
 		my $b = $ob || {};	#keep the old value, or make a new hashref
-		
+
 		while (my $address = $self->getNextLine($self->_banned)){
 			$b->{$address} = 1;
 		};
@@ -800,7 +932,7 @@ Precedence must be either:
  * list (default) - a mailing list
  * bulk - bulk mailing of some type
  * junk - worthless test message.
- 
+
 You can use an alternate Precedence if you set Trusting to 0. But seriously, there's *no* reason to do that. Keeping
 the appropriate precedence will help the servers on the internet route your message as well as the rest of the email out
 there more efficiently. So don't be a jerk, and leave it as one of those three.
@@ -814,7 +946,7 @@ This method is known to be able to return:
 sub Precedence {
 	my $self = shift;
 	my $prop = '_Precedence';
-	
+
 	if (@_){
 		my $precedence = shift;
 		if ($self->Trusting('precedence') || $self->_valid_precedence($precedence)){
@@ -899,8 +1031,9 @@ sub _email_accessor {
 
 	if (@_){
 		my $email = shift;
-		if ($self->Trusting('email') || $self->valid_email($email, $allow_groups)){
-			return $self->$prop($email);
+		if (! defined $email || $self->Trusting('email') || $self->valid_email($email, $allow_groups)){
+			my $return = $self->$prop($email);;
+			return defined $email ? $return : 0;
 		}
 		else {
 			return $self->error("Invalid address: $email", "MB002");
@@ -923,7 +1056,7 @@ sub _email_accessor {
 
 =over 11
 
-=item new 
+=item new
 
 The constructor, used to create new Mail::Bulkmail objects. See Mail::Bulkmail::Object for more information on constructors.
 
@@ -936,39 +1069,39 @@ So that:
  	'Message' => "This is my message!",
  	'HTML' => 0
  ) || die Mail::Bulkmail->error;
- 
+
 is the same as:
 
  my $bulk = Mail::Bulkmail->new() || die Mail::Bulkmail->error;
- 
+
  $bulk->LIST("./list.txt");
  $bulk->Message("This is my message!");
  $bulk->HTML(0);
- 
+
 *technically* it's not exactly the same, since the constructor will fail with an error if your attribute calls return undef, but
 it's close enough.
 
 It is recommend to tack on an || die after your new() calls, to make sure you're alerted if your object isn't created.
 
  my $bulk = Mail::Bulkmail->new() || die Mail::Bulkmail->error();
- 
+
 Otherwise, you won't be alerted if your object isn't created.
 
 Upon creation, Mail::Bulkmail will first iterate through the conf file and populate all of the attributes defined in the conf file
-into your object. It will then iterate through the values you passed to the constructor and mutate the attributes to those 
+into your object. It will then iterate through the values you passed to the constructor and mutate the attributes to those
 values. If you don't pass any arguments to the constructor, it still gets the default values in the conf file. Values passed to
 the constructor always override values specified in the conf file
 
 There is one special constructor flag, "server_file", which does not correspond to an attribute or method. "server_file" is used to
 override the server_file specified in the conf file.
 
-If you pass a key/value pair to the constructor that doesn't have a corresponding attribute, then it is assuming you are setting a 
+If you pass a key/value pair to the constructor that doesn't have a corresponding attribute, then it is assuming you are setting a
 new header.
 
  my $bulk = Mail::Bulkmail->new('foo' => 'bar');
- 
+
  is the same as:
- 
+
  my $bulk = Mail::Bulkmail->new();
  $bulk->header('foo' => 'bar');
 
@@ -980,18 +1113,18 @@ This method is known to be able to return:
 
 sub new {
 	my $class	= shift;
-	
+
 	my %init	= @_;
-	
+
 	my $self = $class->SUPER::new(
 		'servers'			=> [],
 		'_headers'			=> {},
 		"_duplicates"		=> {},
 		"_waiting_message"	=> 0,
 		"_server_index"		=> -1,
-		%init
+		@_
 	) || return undef;
-	
+
 	#now, we iterate through everything else that was passed, since we're gonna assume
 	#that they want to set it as a header
 	foreach my $key (grep {! $self->can($_)} keys %init){
@@ -1010,7 +1143,7 @@ sub new {
 	};
 
 	return $self;
-	
+
 };
 
 =pod
@@ -1028,7 +1161,7 @@ Use this to set any additional headers that you would like.
 Note that you can't use this to bypass validation checks.
 
  $bulk->Header("Subject", "My Subject") will internally change into $bulk->Subject("My Subject");
- 
+
 There's no benefit to doing that, it'll just slow you down.
 
 If you call header with no values, it returns the _headers hashref, containing key value pairs of header => value
@@ -1042,10 +1175,10 @@ This method is known to be able to return:
 
 #header allows us to specify additional headers
 sub header {
-	
+
 	my $self	= shift;
 	my $header	= shift || return $self->_headers;
-	
+
 	if ($header =~ /^(?:From|To|Sender|Reply-To|Subject|Precedence)$/){
 		$header =~ s/\W//g;
 		return $self->$header(@_);
@@ -1060,7 +1193,7 @@ sub header {
 				$self->_headers->{$header} = $value;
 				return $value;
 			}
-			else {	
+			else {
 				delete $self->_headers->{$header};
 				return 0; #non-true value (didn't set it to anything), but a defined value since it's not an error.
 			};
@@ -1082,65 +1215,65 @@ sub header {
 	# 3.00 has a higher standard, though. :)
 	# So valid_email has been re-written. This should match only valid RFC 2822 addresses, with deviations from the
 	# spec noted below. Still only allows single addresses, though. No address lists or groups for the general case.
-	
+
 	# our regexes to deal with whitespace and folding whitespace
 	my $wsp = q<[ \t]>;
 	my $fws = qq<(?:(?:$wsp*\\015\\012)?$wsp+)>;
-	
+
 	# our regexes for control characters
 	my $no_ws_ctl = q<\x01-\x08\x0B\x0C\x0E-\x1F\x7F>;
-	
+
 	# regex for "text", any ascii character other than a CR or LF
 	my $text = q<[\x01-\x09\x0B\x0C\x14-\x7F]>;
-	
+
 	#regexes for "atoms"
-	
+
 		#define our atomtext
 		my $atext = q<[!#$%&'*+\-/=?^`{|}~\w]>;
-	
+
 		# an atom is atext optionally surrounded by folded white space
 		my $atom = qq<(?:$fws*$atext+$fws*)>;
-	
+
 		# a dotatom is atom text optionally followed by a dot and more atomtext
 		my $dotatomtext = qq<(?:$atext+(?:\\.$atext+)*)>;
-	
+
 		#a dotatom is dotatomtext optionally surrounded by folded whitespace
 		my $dotatom = qq<(?:$fws?$dotatomtext$fws?)>;
-	
+
 	#a quoted pair is a backslash followed by a single text character, as defined above.
 	my $quoted_pair = '(?:' . q<\\> . qq<$text> . ')';
-	
+
 	#regexes for quoted strings
-	
-		#quoted text is text between quotes, it can be any control character, 
+
+		#quoted text is text between quotes, it can be any control character,
 		#in addition to any ASCII character other than \ or "
 		my $qtext = '(?:' . '[' . $no_ws_ctl . q<\x21\x23-\x5B\x5D-\x7E> . ']' . ')';
-	
+
 		#content inside a quoted string may either be qtext or a quoted pair
 		my $qcontent = qq<(?:$qtext|$quoted_pair)>;
-		
+
 		#and, finally, our quoted string is optional folded white space, then a double quote
 		#with as much qcontent as we'd like (optionally surrounded by folding white space
 		#then another double quote, and more optional folded white space
 		my $quoted_string = qq<(?:$fws?"(?:$fws?$qcontent)*$fws?"$fws?)>;
-	
+
 	#a word is an atom or a quoted string
 	my $word = qq<(?:$atom|$quoted_string)>;
-	
+
 	#a phrase is multiple words
 	my $phrase = qq<$word+>;
-	
+
 	#the local part of an address is either a dotatom or a quoted string
 	my $local_part = qq<(?:$dotatom|$quoted_string)>;
-	
+
 	#regexes for domains
-		
+
 	#	#domain text may be a control character, in addition to any ASCII character other than [, \, or ]
 	#	my $dtext	= '(?:' . '[' . $no_ws_ctl . q<\x21-\x5A\x5E-\x7E> . ']' . ')';
-	#	
+	#
 	#	#domain content is either dtext or a quoted pair
 	#	my $dcontent = qq<(?:$dtext|$quoted_pair)>;
-	#	
+	#
 	#	#a domain literal is optional folded white space, followed by a literal [
 	#	#then optional folded white space and arbitrary dcontent, followed by another literal ]
 	#	#and then optional fws
@@ -1148,39 +1281,39 @@ sub header {
 	#
 	#	#and, finally, a domain is either a dotatom or a domainliteral.
 	#	my $domain = qq<(?:$dotatom|$domain_literal)>;
-	
+
 		# RFC 2821 is a bit stricter than RFC 2822. In fact, according to that document, a domain may be only
-		# letters, numbers, and hyphens. Go figure. I kept the old domain specification in the comments 
+		# letters, numbers, and hyphens. Go figure. I kept the old domain specification in the comments
 		# immediately above here, just 'cuz I was so proud of 'em. :)
 		my $domain = q<[a-zA-Z0-9\-]+(?:\.[a-zA-Z0-9\-]+)*\\.(?:[a-zA-Z][a-zA-Z](?:[a-zA-Z](?:[a-zA-Z](?:[a-zA-Z][a-zA-Z])?)?)?)>;
-	
+
 	#our address spec. Defines user@domain.com
 	#note - very important, that the addr_spec is within backtracking parentheses. This value will
 	#go into either $1 (common) or $2 (not quite as common).
-	#also note that we deviate from RFC 2822 here, by forcing the TLD of 2,3,4 or 6 characters. 
+	#also note that we deviate from RFC 2822 here, by forcing the TLD of 2,3,4 or 6 characters.
 	#that's what the internet uses, regardless of what the spec allows.
 	my $addr_spec = '(' . $local_part . '@' . $domain . ')';
-	
+
 	#a display name (displayname<addr_spec>) is just a phrase
 	my $display_name = $phrase;
-	
+
 	#an angle_addr is just an addr_spec surrounded by < and >, with optional folded white space
 	#around that
 	my $angle_addr = qq[(?:$fws?<$addr_spec>$fws?)];
-	
+
 	#a name address is an optional display_name followed by an angle_addr
 	my $name_addr = qq<(?:$display_name?$angle_addr)>;
-	
+
 	# and a mailbox is either an addr_spec or a name_addr
 	# the mailbox is our final regex that we use in valid_email
 	#
 	my $mailbox = qq<(?:$addr_spec|$name_addr)>;
 	#
 	##
-	
+
 	# a mailbox list is, as it sounds, a list of at least one mailbox, with as many as you'd like, comma delimited
 	my $mailbox_list = qq<(?:$mailbox(?:,$mailbox)*)>;
-	
+
 	# and a group is a display_name, a :, and an optional mailbox list, ended with a semi-colon
 	# This is used in the To accessor, which is allowed to contain groups.
 	my $group = qq<(?:$display_name:(?:$mailbox_list|$fws)?;)>;
@@ -1190,18 +1323,18 @@ sub header {
 =item valid_email
 
 valid_email validates an email address and extracts the user@domain.com part of an address
- 
+
  print $bulk->valid_email('jim@jimandkoka.com');					#prints jim@jimandkoka.com
  print $bulk->valid_email('"Jim Thomason"<jim@jimandkoka.com>');	#prints jim@jimandkoka.com
  print $bulk->valid_email('jim@jimandkoka.com');					#prints jim@jimandkoka.com
  print $bulk->valid_email('jim@@jimandkoka.com');					#prints nothing (invalid address)
- 
+
 Given an invalid address, returns undef and sets an error as always.
 
 If Trusting is 1, then valid_email only removes comments and extracts the address spec part of the email. i.e., if your address is
 
  some name<some@address.com>
- 
+
 It'll just return some@address.com. This is required, because valid_email is also where the address spec is validated.
 As of 3.00, valid_email should be fully RFC 2822 compliant, except where otherwise noted (such as forcing a valid domain as per RFC 2821).
 And also as of 3.00, Trusting is even more trusting and has a faster return. There are speed reasons to have Trusting set
@@ -1217,21 +1350,21 @@ This method is known to be able to return:
 =cut
 
 	sub valid_email {
-	
+
 		my $self			= shift;
 		my $email			= shift;
 		my $allow_groups	= shift;
-		
+
 		return $self->error("Cannot validate w/o email address", "MB006") unless $email;
-	
+
 		$email = $self->_comment_killer($email);				#No one else handles comments, to my knowledge. Cool, huh?  :)
-	
+
 		# if we're trusting, trivially extract the address-spec and return it
 		if ($self->Trusting('email')){
 			$email =~ s/.+<(.+)>/$1/g;
 			return $email;
 		};
-	
+
 		#okay, check our email address
 		if ($email =~ m!^$mailbox$!o){
 			return $1 || $2;	#our address could be in either place;
@@ -1245,35 +1378,33 @@ This method is known to be able to return:
 		else {
 			$self->logToFile($self->BAD, \$email);
 			return $self->error("Invalid email address : $email", "MB007");
-		};					
+		};
 	};
-	
+
 	# _comment_killer is used internally by valid_email, _comment_killer does what you'd expect from it, it removes
 	# comments from email addresses
-	
-	
+
 	sub _comment_killer {
-	
+
 		my $self  = shift;
 		my $email = shift;
-	
+
 		#comment text is anything in ASCII, except for \, (, and )
 		my $ctext = '(' . '[' . $no_ws_ctl . q<\x21-\x27\x2A-\x5B\x5D-\x7E> . ']' . ')';
-	
+
 		#the content of a comment is either ctext or a quoted pair
 		#we are deviating from RFC 2822, because comments can nest arbitrarily. But we don't allow that.
 		my $ccontent = qq<($ctext|$quoted_pair)>;	#|$comment, but we don't allow nesting here
-		
+
 		#and finally, a comment is a ( followed by arbitrary ccontent, followed by another )
 		my $comment = '(' . '\(' . qq<($fws?$ccontent)*$fws?> . '\)' . ')';
-	
+
 		while ($email =~ /$comment/o){print "EM $email\n";$email =~ s/$comment//go};
-	
+
 		return $email;
 	};
 
 };
-
 
 # _valid_precedence is used internally to check whether a precedence is valid, i.e., list, bulk, or junk
 # It is called by the Precedence wrapper to the _Precedence attribute
@@ -1281,7 +1412,7 @@ This method is known to be able to return:
 sub _valid_precedence {
 	my $self	= shift;
 	my $value	= shift;
-	
+
 	if ($self->Trusting('precedence') || (defined $value && $value =~ /list|bulk|junk/i)){
 		return 1;
 	} else {
@@ -1317,13 +1448,13 @@ sub lc_domain {
 	#even though 99.999% of the net treats it as insensitive.
 
 	my $self	= shift;
-	
+
 	my $email	= shift || return $self->error("Cannot lowercase domain with no email address", "MB009");
-	
+
 	(my $lc = $email) =~ s/^(.+)@(.+)$/$1@\L$2/;
-	
+
 	return $lc;
-	
+
 };
 
 =pod
@@ -1333,7 +1464,7 @@ sub lc_domain {
 sets an email address as a duplicate.
 
  $bulk->setDuplicate($email);
- 
+
 once an address is set as a duplicate, then isDuplicate will return a true value for that address
 
  print $bulk->isDuplicate($email2);	#prints 0
@@ -1360,14 +1491,14 @@ sub setDuplicate {
 	my $email	= shift || return $self->error("Cannot set duplicate without email", "MB010");
 
 	return 1 if $self->Trusting('duplicates');
-	
+
 	if (! $self->Trusting('banned')) {
 		$self->_duplicates->{lc $email} = 1;
 	}
 	else {
 		$self->_duplicates->{$self->lc_domain($email)} = 1;
 	};
-	
+
 	return 1;
 };
 
@@ -1378,7 +1509,7 @@ sub setDuplicate {
 returns a boolean value as to whether an email address is a duplicate
 
  print $bulk->isDuplicate($email); #prints 0 or 1
- 
+
 once an address is set as a duplicate, then isDuplicate will return a true value for that address
 
  print $bulk->isDuplicate($email2);	#prints 0
@@ -1400,9 +1531,9 @@ But if you have to use this to weed out values, go to town.
 sub isDuplicate {
 	my $self	= shift;
 	my $email	= shift || return $self->undef("Cannot check duplicate without email", "MB015");
-	
+
 	return 0 if $self->Trusting('duplicates');
-	
+
 	if (! $self->Trusting('banned')){
 		return $self->_duplicates->{lc $email};
 	}
@@ -1419,7 +1550,7 @@ returns a boolean value as to whether an email address (or domain) is banned or 
 
  $bulk->isBanned($email);	#prints 0 or 1
  $bulk->isBanned($domain);	#prints 0 or 1
- 
+
 ->isBanned goes off of the values populated via the banned attribute
 
 This is mainly used internally, but I decided to make it external anyway.
@@ -1431,7 +1562,7 @@ sub isBanned {
 	my $email	= shift || return $self->undef("Cannot check banned-ness without email", "MB016");
 
 	(my $domain = $email) =~ s/^.+@//;
-	
+
 	return 2 if $self->banned->{lc $domain};
 
 	if (! $self->Trusting('banned')){
@@ -1465,9 +1596,9 @@ This method is known to be able to return:
 
 sub nextServer {
 	my $self = shift;
-	
+
 	return $self->error("No servers", "MB011") unless @{$self->servers};
-	
+
 	my $old_idx = $self->_server_index;
 	my $new_idx = ($old_idx + 1) % @{$self->servers};
 
@@ -1489,7 +1620,7 @@ sub nextServer {
 			#otherwise, try to connect
 			else {
 				$self->servers->[$new_idx]->connect;
-				
+
 				#if we succeed, we're golden
 				if ($self->servers->[$new_idx]->connected){
 					$self->_server_index($new_idx);
@@ -1497,7 +1628,7 @@ sub nextServer {
 				}
 			}
 		};
-		
+
 		#otherwise, no matter what, if we're down here we want to look at the next server in the list
 		$new_idx = ($new_idx + 1) % @{$self->servers};
 	};
@@ -1526,7 +1657,7 @@ This method is known to be able to return:
 sub extractEmail {
 	my $self	= shift;
 	my $email	= shift || return $self->error("Cannot extract email w/o email", "MB013");
-	
+
 	return $self->valid_email($$email);
 
 };
@@ -1544,7 +1675,7 @@ Here, the whole method:
  sub preprocess {
  	my $self	= shift;
  	my $val		= shift;
- 
+
  	return ref $val ? $val : \$val;
  };
 
@@ -1574,23 +1705,23 @@ sub _force_wrap_string {
 
 	#if we're trusting the wrap, just return the string
 	return $string if $self->Trusting('wrapping');
-	
+
 	#determine the length we wrap to
 	my $length = $self->force80 ? 78 : 998;
-	
+
 	#if we're tacking a space on to the front, that's an extra character, so decrement the length to match
 	$length-- if $spaceprepend;
 
 	#we want to split into as many fields as there are returns in the message
 	my @returns = $string =~ m/(\015\012)/g;
-	
+
 	my @lines = split(/\015\012/, $string, scalar @returns);
 	foreach (@lines){
 		if (length $_ > $length){
 			my $one = 0;
 			# boy, did this take finesse. Only prepend a space if it's not the start of the original line
 			# That way, we can properly wrap our headers. That's what $one is.
-			
+
 			# this regex puts as many characters before a wordbreak as it can into $1, and the rest into $2.
 			# if a string is a solid word greater than the the length, it all goes into $2
 			$_ =~ s/(?:([^\015\012]{1,$length})\b)?([^\015\012]+)/$self->_process_string($1, $2, $length, $spaceprepend && ! $one++ ? 1 : 0)/ge;
@@ -1599,12 +1730,12 @@ sub _force_wrap_string {
 
 	#rebuild our string
 	$string = join("\015\012", @lines);
-	
+
 	#get rid of any blank lines we may have created, if so desired.
 	if ($noblanks){
 		$string =~ s/\015\012[^\015\012\S]*\015\012/\015\012/g while $string =~ /\015\012[^\015\012\S]+\015\012/;
 	};
-	
+
 	return $string;
 };
 
@@ -1657,34 +1788,34 @@ sub buildHeaders {
 
 	my $self			= shift;
 	my $data			= shift;
-	
+
 	my $headers_hash	= shift || $self->_headers;
-	
+
 	if ($self->use_envelope && $self->_cached_headers){
 		return $self->_cached_headers;
 	}
 	elsif ($self->_cached_headers){
 
 		my $headers = ${$self->_cached_headers};
-		
+
 		my $email = $self->extractEmail($data);
-		
+
 		$headers =~ s/^To:##EMAIL##/To:$email/m;
-		
+
 		return \$headers;
 	};
-	
+
 	my $headers	= undef;
-	
+
 	$headers .= "Date:" . $self->Date . "\015\012";
-	
+
 	if (my $from = $self->From){
 		$headers .= "From:" . $from . "\015\012";
 	}
 	else {
 		return $self->error("Cannot bulkmail...no From address", "MB014");
 	};
-	
+
 	$headers .= "Subject:" . $self->Subject . "\015\012" if defined $self->Subject && $self->Subject =~ /\S/;
 
 	#if we're using the envelope, then the To: header is the To attribute
@@ -1694,13 +1825,13 @@ sub buildHeaders {
 	else {
 		return $self->error("Cannot bulkmail...no To address", "MB015");
 	};
-	
-	$headers .= "Sender:"			. ($self->Sender || $self->From)		. "\015\012";
+
+	$headers .= "Sender:"		. ($self->Sender || $self->From)		. "\015\012";
 	$headers .= "Reply-To:"		. ($self->ReplyTo || $self->From)		. "\015\012";
-	
+
 	#we're always going to specify at least a list precedence
 	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012";
-		
+
 	if ($headers_hash->{"Content-type"}){
 		$headers .= "Content-type:" . $headers_hash->{"Content-type"} . "\015\012";
 	}
@@ -1712,23 +1843,23 @@ sub buildHeaders {
 			$headers .= "Content-type:text/plain\015\012";
 		};
 	};
-	
+
 	foreach my $key (keys %{$headers_hash}) {
 		next if $key eq 'Content-type';
 		my $val = $headers_hash->{$key};
-		
+
 		next if ! defined $val || $val !~ /\S/;
-		
+
 		$headers .= $key . ":" . $val . "\015\012";
 	};
-	
+
 	# I'm taking credit for the mailing, dammit!
 	$headers .= "X-Bulkmail:" . $Mail::Bulkmail::VERSION . "\015\012";
-	
+
 	$headers = $self->_force_wrap_string($headers, 'start with a blank', 'no blank lines');
-	
+
 	$headers .= "\015\012";	#blank line between the header and the message
-	
+
 	$self->_cached_headers(\$headers);
 
 	unless ($self->use_envelope){
@@ -1739,7 +1870,7 @@ sub buildHeaders {
 	};
 
 	return \$headers;
-	
+
 };
 
 =pod
@@ -1761,26 +1892,26 @@ This method is known to be able to return:
 
 sub buildMessage {
 	my $self	= shift;
-	
+
 	my $data	= shift;
-	
+
 	#if we've cached the message, then return it
 	return $self->_cached_message if $self->_cached_message;
-	
+
 	#otherwise, use the Message, cache that and return it.
 	my $message	= $self->Message()
 		|| return $self->error("Cannot build message w/o message", "MB016");
 
 	#sendmail-ify our line breaks
 	$message =~ s/(?:\r?\n|\r\n?)/\015\012/g;
-	
+
 	#double any periods that start lines
 	$message =~ s/^\./../gm;
-	
+
 	#and force a CRLF at the end, unless one is already present
 	$message .= "\015\012" unless $message =~ /\015\012$/;
 	$message .= ".";
-	
+
 	$message = $self->_force_wrap_string($message);
 
 	$self->_cached_message(\$message);
@@ -1794,7 +1925,7 @@ sub buildMessage {
 This is the bread and butter of the whole set up, and it's easy as pie.
 
  $bulk->bulkmail();
- 
+
 will take your list, iterate over it, build all your message headers, build your message, and email to everyone on your
 list, iterating through all of your servers, log all relevant information, and send you happily on your way.
 
@@ -1819,30 +1950,30 @@ sub bulkmail {
 	while (defined (my $data = $self->getNextLine)){
 
 		if (my $r = $server->reached_limit){
-			
+
 			#if a message is waiting on the previous server, then finish it off
 			if ($self->_waiting_message) {
 
 				my $headers = $self->buildHeaders($last_data);
-		
+
 				my $message = $self->buildMessage($last_data);
-		
+
 				# it is *imperative* that we only send DATA if we have the headers and message body.
 				# otherwise, the server will hang.
 				if ($headers && $message) {
 					my $rc = $server->talk_and_respond("DATA");
 					$server->talk_and_respond($$headers . $$message) if $rc;
 				}
-						
+
 				$self->setDuplicate($self->extractEmail($last_data));
 			};
-		
+
 			$server = $self->nextServer || return undef;
-			
+
 			#new server, so nothing should be waiting, and there are no cached domains
 			$self->_waiting_message(0);
 			$self->_cached_domain(undef);
-			
+
 			#and reset that server's counters
 			$server->reset_message_counters();
 		};
@@ -1855,16 +1986,16 @@ sub bulkmail {
 
 		#check for duplicates or banned addresses
 		if ($self->isDuplicate($email)){
-		
+
 			$self->logToFile($self->BAD, $data) if $self->BAD;
-		
+
 			$self->error("Invalid email address $email : duplicate", "MB017");
 			next;
 		}
 		elsif (my $b = $self->isBanned($email)){
-		
+
 			$self->logToFile($self->BAD, $data) if $self->BAD;
-		
+
 			$self->error("Invalid email address $email : " . ($b == 2 ? 'banned domain' : 'banned address'), "MB018");
 			next;
 		};
@@ -1878,46 +2009,46 @@ sub bulkmail {
 			#first, see if this is a new domain, either the first time through, if it's a different domain than the last
 			#one we saw, or if we reached the server's envelope limit
 			if (! $self->_cached_domain || ($self->_cached_domain && $domain ne $self->_cached_domain()) || $server->reached_envelope_limit) {
-		
+
 				#if a message is waiting, then finish it off
 				if ($self->_waiting_message) {
 					my $headers = $self->buildHeaders($last_data);
-			
+
 					my $message = $self->buildMessage($last_data);
-			
+
 					# it is *imperative* that we only send DATA if we have the headers and message body.
 					# otherwise, the server will hang.
 					if ($headers && $message) {
 						my $rc = $server->talk_and_respond("DATA");
 						$server->talk_and_respond($$headers . $$message) if $rc;
 					}
-							
+
 					$self->setDuplicate($self->extractEmail($last_data));
-					
+
 					$self->_waiting_message(0);
 				};
-				
+
 				#reset our connection, just to be safe
 
 				$server->talk_and_respond("RSET") || next;
 
 				my $from = $self->valid_email($self->Sender || $self->From)
 					|| return $self->error("Could not get valid sender/from address", "MB019");
-				
+
 				#say who the message is from
 				$server->talk_and_respond("MAIL FROM:<" . $from . ">") || next;
-				
+
 				#now, since we know that we reset and sent MAIL FROM properly, we'll reset our counter
 				#and cache this domain
-				
+
 				#reset that server's envelope counter
 				$server->reset_envelope_counter();
 
 				#so now we want to cache this domain
 				$self->_cached_domain($domain);
-				
+
 			};
-			
+
 			#now, we add this email address to the envelope
 			$server->talk_and_respond("RCPT TO:<" . $email . ">") || next;
 
@@ -1930,20 +2061,20 @@ sub bulkmail {
 			#we need to keep track of the last email sent, to finish off the final
 			#waiting_message at the end.
 			$last_data = $data;
-			
+
 			#and finally, we cache the domain
 			$self->_cached_domain($domain);
-			
+
 		}
-		
+
 		#not using the envelope
 		else {
 			$self->mail($data, $server) || next;
 		};
-	
+
 		#make a note of this email address
 		$self->setDuplicate($email);
-	
+
 		#and we increment our counters
 		$server->increment_messages_sent();
 
@@ -1962,12 +2093,12 @@ sub bulkmail {
 			my $rc = $server->talk_and_respond("DATA");
 			$server->talk_and_respond($$headers . $$message) if $rc;
 		}
-				
+
 		$self->setDuplicate($self->extractEmail($last_data));
-		
+
 		$self->_waiting_message(0);
 	};
-	
+
 	return 1;
 
 };
@@ -1979,11 +2110,11 @@ sub bulkmail {
 Works the same as ->bulkmail, but only operates on one email address instead of a list.
 
  $bulk->mail('jim@jimandkoka.com');
- 
+
 Sends your Message as defined in ->Message to jim@jimandkoka.com. You can also optionally pass in a server as the second argument.
 
  $bulk->mail('jim@jimandkoka.com', $server);
- 
+
 is the same as above, but relays through that particular server. if you don't pass a server, if tries to bring the next one
 in via ->nextServer
 
@@ -2010,9 +2141,9 @@ sub mail {
 	my $email	= $self->extractEmail($data) || return undef;
 
 	if (my $b = $self->isBanned($email)){
-		
+
 		$self->logToFile($self->BAD, $data) if $self->BAD;
-		
+
 		return $self->error("Invalid email address $email : " . ($b == 2 ? 'banned domain' : 'banned address'), "MB018");
 	};
 
@@ -2020,10 +2151,10 @@ sub mail {
 
 	$server->talk_and_respond("RSET")
 		|| return $self->error($server->error, $server->errcode, 'not logged');
-	
+
 	my $from = $self->valid_email($self->Sender || $self->From)
 		|| return $self->error("Could not get valid sender/from address", "MB019");
-	
+
 	#say who the message is from
 	$server->talk_and_respond("MAIL FROM:<" . $from . ">")
 		|| return $self->error($server->error, $server->errcode, 'not logged');
@@ -2031,7 +2162,7 @@ sub mail {
 	#now, we add this email address to the envelope
 	$server->talk_and_respond("RCPT TO:<" . $email . ">")
 		|| return $self->error($server->error, $server->errcode, 'not logged');
-		
+
 	#we build the headers and message body FIRST, to make sure we have them.
 	#that way, we can never send DATA w/o a message and hang the server
 	my $headers = $self->buildHeaders($data) || return undef;
@@ -2045,7 +2176,7 @@ sub mail {
 
 	#make a note of the email address in the log
 	$self->logToFile($self->GOOD, $data) if $self->GOOD;
-	
+
 	return $email;
 };
 
@@ -2071,7 +2202,7 @@ The last official big benchmark I ran was with v1.11. That list runs through to 
 an hour and 43 minutes, which meant that Mail::Bulkmail 1.11 could process (at least) 884 messages per minute or about
 53,100 per hour.
 
-The last message sent out was 4,979 bytes.  4979 x 91,140 people is 453,786,060 bytes of data 
+The last message sent out was 4,979 bytes.  4979 x 91,140 people is 453,786,060 bytes of data
 transferred, or about 453.786 megabytes in 1 hour and 43 minutes.  This is a sustained transfer rate of about 4.4 megabytes
 per minute, or 264.34 megabytes per hour.
 
@@ -2095,14 +2226,14 @@ Now then, there's another thing to consider, envelope sending. With envelope sen
  v3.00......12 seconds	(1.00)
  v2.05......19 seconds	(1.58)
  v1.11......22 seconds	(1.83)
- 
-This is with an envelope_limit of 100. So the supposed speed gains that envelope sending were supposed to see in 2.05 never 
+
+This is with an envelope_limit of 100. So the supposed speed gains that envelope sending were supposed to see in 2.05 never
 really materialized. While doing these tests, I discovered a bug in 2.05's use_envelope routine that would sometimes cause it
 to slow down substantially. 3.00, with a new routine, was never affected. Incidentally, Bulkmail 2.05 will be faster with trivially
 low envelope_limits. Bulkmail 3.00 becomes faster with an envelope_limit greater than 2.
 
 There is also mail merging (filemapping in 1.x) that should be considered. This was benchmarked with Mail::Bulkmail::Dynamic for 3.00.
-A simple mail merge with one item was used, and one global item, read from a file, and split on a delimiter (since this was the 
+A simple mail merge with one item was used, and one global item, read from a file, and split on a delimiter (since this was the
 only functionality that v1.x had). With mail merge turned on (average times):
 
  v1.11......20 seconds	(1.00)
@@ -2125,7 +2256,7 @@ measurements reflecting how long it may take your SMTP relay to send the data on
 =item Am I going to see speeds that fast?
 
 Maybe, maybe not.  It depends on how busy your SMTP server is.  If you have a relatively unused SMTP server with a fair amount
-of horsepower and a fast connection, you can easily get these speeds or beyond.  If you have a relatively busy and/or low powered 
+of horsepower and a fast connection, you can easily get these speeds or beyond.  If you have a relatively busy and/or low powered
 SMTP server or slow connections, you're not going to reach speeds that fast.
 
 =item How much faster will Mail::Bulkmail be than my current system?
@@ -2247,6 +2378,19 @@ It will now date all messages to the time of the first sent message.
 
 You can no longer externally load in a list of duplicates. Come on, did *anybody* ever actually do that?
 
+=item When I try to bulkmail, I get an error that says "Cannot bulkmail...no To address" How do I fix this?
+
+Ya know, I B<thought> this error was self-explanatory, but considering the number of people that email me
+about it, I guess it's not.
+
+The issue here is that (say it with me now), you can't bulkmail because the To header hasn't been set.
+If you're using envelope sending (on by default in Mail::Bulkmail), then you have to specify an address
+to set in the To: header of the message. This is specified via the ->To accessor.
+
+ $bulk->To("mylist@mysite.com");
+
+So, specify the To header, and then you'll be fine.
+
 =item Wow, this module is really cool.  Have you contributed anything else to CPAN?
 
 Yes, Carp::Notify and Text::Flowchart
@@ -2273,9 +2417,9 @@ Sure, anything you need to know.  Just drop me a message.
  	"To"		=> 'somelist@mydomain.com',
  	"Reply-To"	=> 'replies@mydomain.com'
  ) || die Mail::Bulkmail->error();
- 
+
  $bulk->bulkmail || die $bulk->error;
- 
+
 #same thing, but turning off envelope sending
 
  my $bulk = Mail::Bulkmail->new(
@@ -2286,9 +2430,9 @@ Sure, anything you need to know.  Just drop me a message.
  	"Reply-To"		=> 'replies@mydomain.com',
  	"use_envelope" => 0
  ) || die Mail::Bulkmail->error();
- 
+
  $bulk->bulkmail || die $bulk->error;
- 
+
 #Small example, with a miniature in memory list
 
  my $bulk = Mail::Bulkmail->new(
@@ -2300,7 +2444,7 @@ Sure, anything you need to know.  Just drop me a message.
  	"Reply-To"	=> 'replies@mydomain.com',
  	"Sender"	=> 'sender@mydomain.com'
  ) || die Mail::Bulkmail->error();
- 
+
  $bulk->bulkmail || die $bulk->error;
 
 #Make sure our error logging is on in a different place, and set up a different server
@@ -2320,9 +2464,9 @@ Sure, anything you need to know.  Just drop me a message.
  	"ERRFILE"	=> '/etc/mb/error.file.txt',
  	"servers"	=> [$server]	#our new server
  ) || die Mail::Bulkmail->error();
- 
+
  $bulk->bulkmail || die $bulk->error;
- 
+
 #Make sure our error logging is on in a different place, and set up a different server
 #this time, we'll use a dummy server for debugging purposes
 
@@ -2340,7 +2484,7 @@ Sure, anything you need to know.  Just drop me a message.
  	"ERRFILE"	=> '/etc/mb/error.file.txt',
  	"servers"	=> [$dummy_server]	#our new server, which is a dummy server
  ) || die Mail::Bulkmail->error();
- 
+
  $bulk->bulkmail || die $bulk->error;
 
 #mailing just to one address
@@ -2352,7 +2496,7 @@ Sure, anything you need to know.  Just drop me a message.
  	"Reply-To"	=> 'replies@mydomain.com',
  	"Sender"	=> 'sender@mydomain.com'
  ) || die Mail::Bulkmail->error();
- 
+
  $bulk->mail('test@yourdomain.com') || die $bulk->error;
 
 =head1 SAMPLE CONFIG FILE
@@ -2365,30 +2509,30 @@ For more information on conf files, see Mail::Bulkmail::Object. For more informa
 Mail::Bulkmail::Server. This file is also stored in the file "sample.cfg.file"
 
  define package Mail::Bulkmail
- 
- #server_class stores the server object that we're going to use. 
+
+ #server_class stores the server object that we're going to use.
  #uncomment the DummyServer line and comment out the Server line for debugging
- 
+
  server_class = Mail::Bulkmail::Server
  #server_class = Mail::Bulkmail::DummyServer
- 
+
  #log our errors
  ERRFILE = /etc/mb/error.txt
  BAD    = /etc/mb/bad.txt
  GOOD   = /etc/mb/good.txt
  banned = /etc/mb/banned.txt
- 
+
  #if we want a default From value, you can place it here.
  #From = me@mydomain.com
 
  define package Mail::Bulkmail::Server
- 
+
  #set up the domain we use to say HELO to our relay
  Domain = mydomain.com
- 
+
  #Most servers are going to connect on port 25, so we'll set this as the default port here
  Port = 25
- 
+
  #We'll give it 5 tries to connect before we let ->connect fail
  Tries = 5
 
@@ -2397,37 +2541,36 @@ Mail::Bulkmail::Server. This file is also stored in the file "sample.cfg.file"
 
  #100 is a good number for the envelope_limit
  envelope_limit = 100
- 
+
  #Send 1,000 messages to each server in the round before going to the next one.
  #set max_messages_per_robin to 0 if you're only using one server, otherwise you'll have needless
  #overhead
  max_messages_per_robin = 0
- 
+
  #maximum number of messages per connection. Probably best to keep this 0 unless you have a reason
  #to do otherwise
- max_messages_per_connection = 0 
- 
+ max_messages_per_connection = 0
+
  #maximum number of messages for the server. Probably best to keep this 0 unless you have a reason
  #to do otherwise
  max_messages= 0
- 
+
  #maximum number of messages to send before sleeping, probably best to keep this 0 unless you need
  #to let your server relax and sleep
  max_messages_while_awake = 0
- 
+
  #sleep for 10 seconds if we're sleeping. This line is commented out because we don't need it.
  #No harm in uncommenting it, though.
  #sleep_length = 10
- 
+
  #our list of servers
  server_file = /etc/mb/servers.txt
- 
 
  define package Mail::Bulkmail::Dynamic
 
  #it is highly recommended that quotemeta be 1
  quotemeta = 1
- 
+
  #set up our default delimiters
  dynamic_message_delimiter			= ;
  dynamic_message_value_delimiter	= =
@@ -2436,14 +2579,14 @@ Mail::Bulkmail::Server. This file is also stored in the file "sample.cfg.file"
 
  #we're going to assume that duplicates have been weeded out, so we'll allow them.
  Trusting	@= duplicates
- 
+
  #By default, we'll turn on our envelope. Mail::Bulkmail might as well use it.
  #Mail::Bulkmail::Dynamic doesn't care about this value.
  use_envelope    	= 1
- 
+
  define package Mail::Bulkmail::DummyServer
 
- #Our dummy data file, for when we're using DummyServer. It's also useful to send the data to 
+ #Our dummy data file, for when we're using DummyServer. It's also useful to send the data to
  #/dev/null to test things if you don't care about the message output.
  dummy_file = /etc/mb/dummy.file
  #dummy_file = /dev/null

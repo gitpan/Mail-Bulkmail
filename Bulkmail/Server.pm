@@ -19,13 +19,13 @@ Jim Thomason, jim@jimandkoka.com
  	'Smtp' => 'your.smtp.com',
  	'Port' => 25
  ) || die Mail::Bulkmail::Server->error();
- 
+
  #connect to the SMTP relay
  $server->connect || die $server->error();
- 
+
  #talk to the server
  my $response = $server->talk_and_respond("RSET");
- 
+
 =head1 DESCRIPTION
 
 Mail::Bulkmail::Server now handles server connections. Mail::Bulkmail 1.x and 2.x had all the server functionality
@@ -65,7 +65,7 @@ use warnings;
 stores the Smtp relay's address.
 
  $server->Smtp("your.smtp.com");
- 
+
 can either be an IP or a named address
 
 Smtp values should be set in your server file.
@@ -82,9 +82,9 @@ stores the port on which you'll try to connect to the SMTP relay. Probably going
 standard SMTP port.
 
  $server->Port(25);
- 
-Port values should be set in either your server file, or a single default in your conf file. 
- 
+
+Port values should be set in either your server file, or a single default in your conf file.
+
 =cut
 
 __PACKAGE__->add_attr('Port');
@@ -97,7 +97,7 @@ When you connect to an SMTP server, you must say hello and state your domain. Th
 use to say hello.
 
  $server->Domain('mydomain.com');
- 
+
 This should be the same name of the domain of the machine that you are connecting on.
 
 Domain should be set in your conf file.
@@ -117,7 +117,7 @@ the connection before failing to connect.
 Make this a small number.
 
  $server->Tries(5);
- 
+
 Tries should be set in your conf file.
 
 =cut
@@ -136,7 +136,7 @@ trying to connect to invalid servers.
 Make this a small number as well.
 
  $server->max_connection_attempts(7);
- 
+
 max_connection_attempts should be set in your conf file.
 
 =cut
@@ -194,7 +194,7 @@ of the main one. Your primary SMTP server can handle lots of messages, but your 
 That'd a good place for max_messages.
 
  $aux_server->max_messages(10000);
- 
+
 That way, your smaller server will relay no more than 10,000 messages.
 
 Set max_messages to 0 for an infinite number of messages to go through the server. It is recommended to set max_messages
@@ -248,7 +248,7 @@ Sometimes, it may be useful to pause and give your server a break. max_messages_
 specify the number of messages to send to a server before going to sleep for a certain period of time.
 
  $server->max_messages_while_awake(100);
- 
+
 Will send 100 messages to the server and then go to sleep. for the time specified by sleep_length.
 
 Note that reaching this limit will not cause reached_limit to return a true value, so in a multi-server environment, you'll
@@ -283,7 +283,7 @@ the same command again. talk_attempts specifies the number of times to try resen
 from the server.
 
  $server->talk_attempts(5);
- 
+
 =cut
 
 __PACKAGE__->add_attr('talk_attempts');
@@ -296,7 +296,7 @@ We can *finally* time out! So if your SMTP relay doesn't respond for a set perio
 disconnect and fail with an error. Set this to something high, the value is in seconds.
 
  $server->time_out(3000);	# 5 minutes
- 
+
 =cut
 
 __PACKAGE__->add_attr('time_out');
@@ -362,21 +362,21 @@ CONVERSATION may be either a coderef, globref, arrayref, or string literal.
 If a string literal, then Mail::Bulkmail::Server will attempt to open that file (in append mode) as your log:
 
  $server->CONVERSATION("/path/to/my/conversation");
- 
+
 If a globref, it is assumed to be an open filehandle in append mode:
 
  open (C, ">>/path/to/my/conversation");
  $server->CONVERSATION(\*C);
- 
+
 if a coderef, it is assumed to be a function to call with the address as an argument:
 
  sub C { print "CONVERSATION : ", $_[1], "\n"};	#or whatever your code is
  $server->CONVERSATION(\&C);
- 
+
 if an arrayref, then the conversation will be pushed on to the end of it
 
  $server->CONVERSATION(\@conversation);
- 
+
 Use whichever item is most convenient, and Mail::Bulkmail::Server will take it from there.
 
 B<Be warned>: This file is going to get B<huge>. Massively huge. You should only turn this on for debugging
@@ -421,19 +421,19 @@ It will also store the time the last message is sent.
 
 sub increment_messages_sent {
 	my $self = shift;
-	
+
 	$self->_sent_messages($self->_sent_messages + 1);
-	
+
 	$self->_sent_messages_this_robin($self->_sent_messages_this_robin + 1);
-	
+
 	$self->_sent_messages_this_connection($self->_sent_messages_this_connection + 1);
-	
+
 	$self->_sent_messages_while_awake($self->_sent_messages_while_awake + 1);
-	
+
 	$self->_sent_messages_this_envelope($self->_sent_messages_this_envelope + 1);
-	
+
 	$self->time_of_last_message(time);
-	
+
 	return $self;
 };
 
@@ -448,17 +448,17 @@ and messages sent while awake back to 0.
 
 sub reset_message_counters {
 	my $self = shift;
-	
+
 	#$self->_sent_messages(0);					#this never gets reset
-	
+
 	$self->_sent_messages_this_robin(0);
-	
+
 	#$self->_sent_messages_this_connection(0);	#this gets set upon connect
-	
+
 	$self->_sent_messages_while_awake(0);
-	
+
 	$self->_sent_messages_this_envelope(0);
-	
+
 	return $self;
 };
 
@@ -473,9 +473,9 @@ envelope counter.
 
 sub reset_envelope_counter {
 	my $self = shift;
-	
+
 	$self->_sent_messages_this_envelope(0);
-	
+
 	return $self;
 };
 
@@ -489,7 +489,7 @@ This method returns 1 if we've reached the envelope limit, 0 otherwise
 
 sub reached_envelope_limit {
 	my $self = shift;
-	
+
 	return 1 if $self->envelope_limit && $self->_sent_messages_this_envelope >= $self->envelope_limit;
 };
 
@@ -510,13 +510,13 @@ specified in sleep_length
 
 sub reached_limit {
 	my $self = shift;
-	
+
 	#sleep if we're supposed to sleep
 	if ($self->max_messages_while_awake && $self->_sent_messages_while_awake >= $self->max_messages_while_awake){
 		sleep $self->sleep_length if $self->sleep_length;
 		$self->_sent_messages_while_awake(0);
 	};
-	
+
 	if ($self->max_messages && $self->_sent_messages >= $self->max_messages){
 		$self->disconnect();
 		$self->_sent_messages_this_connection(0);
@@ -555,14 +555,14 @@ sub new {
 		'_sent_messages_this_connection'	=> 0,
 		'_sent_messages_while_awake'		=> 0,
 		'_sent_messages_this_envelope'		=> 0,
-		'connected' 						=> 0,
+		'connected'							=> 0,
 		'_esmtp'							=> {},
 		'_not_worthless'					=> 5,	#default to 5 regardless of the conf file
 		@_
 	) || return undef;
-	
+
 	$self->_not_worthless($self->max_connection_attempts) if $self->max_connection_attempts;
-	
+
 	return $self;
 };
 
@@ -588,6 +588,7 @@ This method is known to be able to return:
  MBS011 - server gave an error for EHLO
  MBS015 - timed out waiting for response upon connect
  MBS016 - server didn't respond to EHLO, trying HELO (non-returning error)
+ MBS017 - cannot connect to server, no Tries parameter
 
 =cut
 
@@ -596,9 +597,11 @@ sub connect {
 	my $self = shift;
 
 	return $self if $self->connected();
-	
+
+	return $self->error("Cannot connect to server - no Tries parameter set", "MBS017");
+
 	return $self->error("Cannot connect to worthless servers", "MBS001") unless $self->_not_worthless > 0;
-	
+
 	my $bulk = $self->gen_handle();
 
 	my ($s_tries, $c_tries) = ($self->Tries, $self->Tries);
@@ -609,40 +612,40 @@ sub connect {
 		return $self->error("Could not make socket for " . $self->Smtp . ", Socket error ($!)", "MBS002");
 	}
 	else {
-	
+
 		my $paddr = sockaddr_in($self->Port, inet_aton($self->Smtp));
-	
+
 		1 while ! connect($bulk, $paddr) && $c_tries--;
-	
+
 		if ($c_tries < 0){
 			$self->_not_worthless($self->_not_worthless - 1);
 			return $self->error("Could not connect to " . $self->Smtp . ", Connect error ($!)", "MBS003") if $c_tries < 0;
 		}
 		else {
-		
+
 			$@ = undef;
 			eval {
 				local $SIG{"ALRM"} = sub {die "timed out"};
-				
+
 				eval{ alarm($self->time_out) if $self->time_out; };	#catch it in case alarm isn't implemented (stupid windows)
-				
+
 				#keep our bulk pipes piping hot.
 				select((select($bulk), $| = 1)[0]);
-			
+
 				local $\ = "\015\012";
 				local $/ = "\015\012";
-			
+
 				my $response = <$bulk> || "";
 				return $self->error("No response from server: $response", "MBS004") if  ! $response || $response =~ /^[45]/;
-			
+
 				#grab our domain
 				my $domain = $self->Domain || return $self->error("Cannot greet server without domain", "MBS010");
-			
+
 				#first, we'll try to say EHLO
 				print $bulk "EHLO $domain";
-				
-				$response = <$bulk> || "";	
-	
+
+				$response = <$bulk> || "";
+
 				#log our conversation, if desired.
 				if ($self->CONVERSATION){
 					$self->logToFile($self->CONVERSATION, "Said to server: 'EHLO'");
@@ -651,59 +654,59 @@ sub connect {
 
 				#now, if the server didn't respond or gave us an error, we'll fall back and try saying HELO instead
 				if (! $response || $response =~ /^[45]/){
-					
+
 					$self->error("Server did not respond to EHLO...trying HELO", "MBS016");
-					
+
 					print $bulk "HELO $domain";
-					
+
 					$response = <$bulk> || "";
-					
+
 					#log our conversation, if desired
 					if ($self->CONVERSATION){
 						$self->logToFile($self->CONVERSATION, "Said to server: 'HELO'");
 						$self->logToFile($self->CONVERSATION, "\tServer replied: '$response'");
 					};
-					
+
 					return $self->error("Server won't say HELO: $response", "MBS005") if ! $response || $response =~ /^[45]/;
 				}
 				#otherwise, it accepted our EHLO, so we'll read in our list of ESMTP options
 				else {
 					my $receiving = 1;
-					
+
 					while ($receiving) {
 						my $r = <$bulk> || "";
-						
+
 						#log our conversation, if desired
 						if ($self->CONVERSATION){
 							$self->logToFile($self->CONVERSATION, "\tServer replied: '$r'");
 						};
-						
+
 						$self->error("Server gave an error for EHLO : $r", "MBS011") if ! $r || $r =~ /^[45]/;
-						
+
 						#extract out and store our ESMTP options for possible later use
 						$r =~ /^\d\d\d[ -](\w+)/;
 						my $esmtp_option = $1;
 						$self->_esmtp->{$esmtp_option} = 1 if $esmtp_option;
-			
+
 						#multi-line replies are of the form \d\d\d-, single line (or last line replies are \d\d\d" "
 						$receiving = 0 if $r =~ /^\d\d\d /;
 					};
-				
+
 				};	#end successful EHLO
 			}; #end eval wrapping up our time out
-		
+
 			#clear our alarm
 			eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
-			
+
 			if ($@){
 				return $self->error("Timed out waiting for response on connect", "MBS015");
 			};
-		
+
 			$self->socket($bulk);
-		
+
 			$self->connected(1);
 			$self->_sent_messages_this_connection(0);
-		
+
 			return $self;
 		};
 	};
@@ -732,17 +735,17 @@ sub disconnect {
 
 	$self->talk_and_respond('RSET') unless $quietly;	#just to be polite
 	$self->talk_and_respond('quit') unless $quietly;
-	
+
 	if (my $socket = $self->socket) {
 		close $socket;
 		$socket = undef;
 	};
-	
+
 	$self->socket(undef);
-	
+
 	#wipe out our ESMTP hash, since it may not be valid upon next connect
 	$self->_esmtp({});
-	
+
 	$self->connected(0);
 
 	return $self;
@@ -756,7 +759,7 @@ sub disconnect {
 talk_and_respond takes one argument and sends it to your SMTP relay. It then listens for a response.
 
  my $response = $server->talk_and_respond("RSET");
- 
+
 If you're not connected to the relay, talk_and_respond will attempt to connect.
 
 This method is known to be able to return:
@@ -773,34 +776,34 @@ This method is known to be able to return:
 
 sub talk_and_respond {
 	my $self	= shift;
-	
+
 	my $talk	= shift || return $self->error("Cannot talk w/o speech", "MBS006");
-	
+
 	my $attempts= shift || $self->talk_attempts;
-	
+
 	unless ($self->connected){
 		$self->connect || return undef;
 	};
 
 	my $bulk = $self->socket();
-	
+
 	local $\ = "\015\012";
 	local $/ = "\015\012";
-	
+
 	unless (print $bulk $talk){
 		return $self->error("Cannot talk to server : $!", "MBS007");
 	};
-	
+
 	#keep track of the first 50 characters, w/o returns for logging purposes
 	my $short_talk = substr($talk, 0, 50);
 	$short_talk .= "...(truncated)" if length $talk > length $short_talk;
-	
+
 	if ($self->CONVERSATION){
 		$self->logToFile($self->CONVERSATION, "Said to server: '$short_talk'");
 	};
-	
+
 	my $response = undef;
-	
+
 	#this is true as long as we're expecting more responses from the server
 	my $receiving = 1;
 
@@ -824,7 +827,7 @@ sub talk_and_respond {
 
 				return $self->error("Server won't respond to '$talk' : $r" . $self->Smtp, "MBS008");
 			}
-			
+
 			#400 error codes are temporary fatal errors
 			#If we get a 4xy error, we're going to retry this same command up to our
 			#talk_attempts parameter. If it never works, we'll fail completely
@@ -838,7 +841,7 @@ sub talk_and_respond {
 					return $self->error("Server won't respond to $talk, and re-attempts for temporary code exhausted", "MBS013");
 				};
 			}
-			
+
 			#otherwise, if we got a 221, we were disconnected.
 			elsif ($r && $r =~ /^221/){
 				#if we disconnected from something other than a quit, then log the error
@@ -851,17 +854,17 @@ sub talk_and_respond {
 					return 'disconnected';
 				};
 			}
-			
+
 			#finally, if it's something else, then we're gonna assume it's a happy response
 			#and tack it on to the response we return
 			else {
 				# Responses of \d\d\d" " indicate we're done and there's nothing
 				# else coming
 				$receiving = 0 if $r =~ /^\d\d\d / || $r =~ /^\d\d\d$/;
-				
+
 				$response .= $r;
 			};
-	
+
 		};	#end while
 	};	#end eval
 
@@ -874,7 +877,7 @@ sub talk_and_respond {
 	};
 
 	return $response;
-};		
+};
 
 #make sure that we're disconnected
 sub DESTROY {
@@ -892,16 +895,16 @@ create_all_servers will iterate through the file specified in server_file in the
 server objects created.
 
  define package Mail::Bulkmail::Server
- 
+
  server_file	= ./server_file.txt
- 
+
 your server file should be of the format of another Mail::Bulkmail conf file, containing definitions
 for all of the SMTP servers you want to use. See the examples below for how to set up the conf files.
 
 If you would like to specify a different conf file, pass that as an argument.
 
  my $servers = Mail::Bulkmail::Server->create_all_servers('/path/to/new/server_file.txt');
- 
+
 This will then ignore the server_file in the conf file and use the one passed.
 
 You may also pass hashrefs of init data for new servers.
@@ -917,20 +920,20 @@ You may also pass hashrefs of init data for new servers.
  		'Smtp' => 'smtp3.yourdomain.com'
  	}
  ) || die Mail::Bulkmail::Server->error;
- 
+
 This is called internally by Mail::Bulkmail's constructor, so you probably won't ever need to touch it.
 
 =cut
 
 sub create_all_servers {
 	my $self	= shift;
-	
+
 	my $class	= ref $self || $self;
 
 	my $master_conf = $self->read_conf_file();
-	
+
 	my $conf = {};
-	
+
 	if ($_[0] && ! ref $_[0]){
 		my $file = shift;
 		$conf = $self->read_conf_file($file);
@@ -961,7 +964,7 @@ sub create_all_servers {
 			: ($conf->{$class}->{$attribute});
 
 	};
-	
+
 	my @servers = ();
 
 	while (@{$data->{"Smtp"}}){
@@ -978,7 +981,7 @@ sub create_all_servers {
 
 		push @servers, $server;
 	};
-	
+
 	if (@_){
 		while (my $init = shift){
 			my $server = $class->new(
@@ -990,7 +993,7 @@ sub create_all_servers {
 	};
 
 	return \@servers;
-	
+
 };
 
 1;
@@ -1008,14 +1011,14 @@ for more information on conf file set up and how to define your server_file.
 
  #in your conf file, you want this
  define package Mail::Bulkmail::Server
- 
+
  #your server file
  server_file = /etc/mb/server.file.txt
- 
+
 Now, your server file should look like this:
 
  define package Mail::Bulkmail::Server
- 
+
  #set up the first server
  Smtp @= smtp1.yourdomain.com
  Port @= 25
@@ -1029,14 +1032,14 @@ Now, your server file should look like this:
  Tries @= 5
  max_messages_per_robin @= 1000
  envelope_limit @= 100
- 
+
  #set up the third server
  Smtp @= smtp3.yourdomain.com
  Port @= 25
  Tries @= 5
  max_messages_per_robin @= 1000
  envelope_limit @= 100
- 
+
 Alternatively, you can use defaults in your master conf file.
 
  #your server file
@@ -1047,20 +1050,20 @@ Alternatively, you can use defaults in your master conf file.
  Tries = 5
  max_message_per_robin = 1000
  envelope_limit = 100
- 
+
 Now, your server file should look like this:
 
  define package Mail::Bulkmail::Server
- 
+
  #set up the first server
  Smtp @= smtp1.yourdomain.com
 
  #set up the second server
  Smtp @= smtp2.yourdomain.com
- 
+
  #set up the third server
  Smtp @= smtp3.yourdomain.com
- 
+
 Be warned that if you want to set up a value for one server, you should set it up for all of them. Either
 specify the attribute for a server in the master conf file, or specify it multiple times for all servers.
 

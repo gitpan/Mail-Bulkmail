@@ -27,7 +27,7 @@ Jim Thomason, jim@jimandkoka.com
  ) || die Mail::Bulkmail->error();
 
  $bulk->bulkmail() || die $bulk->error;
- 
+
 Don't forget to set up your conf file!
 
 =head1 DESCRIPTION
@@ -45,7 +45,7 @@ but happy with the fact that it worked nonetheless.
 3.00 strips that ability out of Mail::Bulkmail, cleans it up, and places it here. This has a few advantages.
 For one thing, if you're not doing any mailmerging, then you don't have to worry about any of the overhead
 of building hashes, doing checks, internally handling things, and so on. There wasn't a tremendous amount
-of useless work done in that case, but it was enough to be noticed. So now use Mail::Bulkmail if you're 
+of useless work done in that case, but it was enough to be noticed. So now use Mail::Bulkmail if you're
 not doing mail merges, and Mail::Bulkmail::Dynamic if you are.
 
 And the other thing is that the code is cleaned up a B<lot>. I actually know and understand how it all works
@@ -83,10 +83,10 @@ addresses. Mail::Bulkmail::Dynamic has a harder time, since it's usually an emai
  	"name"		 => "Jim Thomason",
  	"age"		 => "24"
  }
- 
+
 Most of that is obviously not simple scalar data and needs to be logged differently. If log_all_data is
 set to 0, then only the email address will be logged and everything is fine. However, if log_all_data is
-1, then a hashref containing all of the data is returned (regardless of the type of data structure you 
+1, then a hashref containing all of the data is returned (regardless of the type of data structure you
 initially handed in). Obviously, you will then need to deal with logging yourself, either by logging to an
 arrayref or (better) to a function call. Logging to a file with log_all_data set to 1 will just give you
 a useless list of "HASH(0x7482)" and the like.
@@ -109,11 +109,11 @@ Okay, let's start off with the simple case, you have a file that contains a list
  foo@bar.com
  bob@hope.com
  john@junior.com
- 
+
 And you set up a list with Mail::Bulkmail to mail to them. Your message is something like this:
 
  "Hi there. Things are great in my world, how's yours?"
- 
+
 This works fine for a while, people are happy, everything's dandy. But then, you decide that it would
 be nice to personalize your email messages in some fashion. So you switch to Mail::Bulkmail::Dynamic.
 You'll need more information in your list of addresses now.
@@ -121,12 +121,12 @@ You'll need more information in your list of addresses now.
  foo@bar.com::Mr. Foo
  me@there.com::Bob Hope
  john@junior.com::John Jr.
- 
-And then you'll need to define your merge_keys. merge_keys is an arrayref that defines how the data in your 
+
+And then you'll need to define your merge_keys. merge_keys is an arrayref that defines how the data in your
 file is structured:
 
  merge_keys => [qw(BULK_EMAIL <<NAME>>)]
- 
+
 That tells Mail::Bulkmail::Dynamic that the first item in your list is the email address, and the second
 one is your name. Please note that the email address B<MUST> be called "BULK_EMAIL", that's the keyword
 that the module looks for to find the address to send to. The rest of your keys may be named anything you'd
@@ -138,39 +138,39 @@ may add more special keys like that in the future.
 Now you can change your message to the following:
 
  "Hi there, <<NAME>>. Things are great in my world, how's yours?"
- 
+
 This will send out the messages, respectively:
 
  Hi there, Mr. Foo. Things are great in my world, how's yours?
- 
+
  Hi there, Bob Hope. Things are great in my world, how's yours?
-  
+
  Hi there, John Junior. Things are great in my world, how's yours?
- 
+
 And voila. Customization. you may include as much data as you'd like:
 
  merge_keys = [qw(<<NAME>> BULK_EMAIL <<STATE>> <<AGE>> <<HOBBY>> <<PREFERRED COMPUTER>>)]
- 
+
  #in your list:
  Jim Thomason::jim@jimandkoka.com::IL::24::Programming Perl::titanium powerbook
- 
+
  #and then your message.
- 
+
  Dear <<NAME>>,
  How've you been? I see that your email address is still BULK_EMAIL.
  Are you still living in <<STATE>>? And you're still <<AGE>>, right?
- 
+
  Do you still enjoy <<HOBBY>>?
  Well, email me back a message from your <<PREFERRED COMPUTER>>.
- 
+
 And that's all there is to it. Just be sure to remember that any keys you define will get clobbered *anywhere*
 in the message.
 
  merge_keys => [qw(BULK_EMAIL name)]
  LIST => [qw(jim@jimandkoka.com::Jim)]
- 
+
  "Hi there, name. I've always liked your name."
- 
+
 You *probably* want that message to populate as:
 
  "Hi there, Jim. I've always liked your name."
@@ -183,17 +183,17 @@ Which doesn't make sense. So just make sure your keys aren't anywhere else in yo
 
  merge_keys => [qw(BULK_EMAIL <name>)]
  LIST => [qw(jim@jimandkoka.com::Jim)]
- 
+
  "Hi there, <name>. I've always liked your name."
 
 Your list data may be a delimited scalar, as we've been using in our examples:
 
  jim@jimandkoka.com::Jim::24
- 
+
 Or an arrayref:
 
  ['jim@jimandkoka.com', 'Jim', '24']
- 
+
 In both of those cases, the order of the data is important. Each data element matches up to a particular
 key. So be sure that your data is actually in the same order as defined in your merge_keys array.
 
@@ -216,7 +216,7 @@ or arrayrefs and see which is faster for your uses.
 mail merges apply to B<both> message B<and> header information. So it's valid to do:
 
  $dynamic->Subject("Hello there, <name>");
- 
+
 And have the mail merge pick that up.
 
 Note that the merge will be performed in an arbitrary order, independent of what's specified in
@@ -236,22 +236,22 @@ Set it with merge_delimiter.
 
  #in your list
  jim@jimandkoka.com::Jim
- 
+
  #then
  $dynamic->merge_delimiter("::");
- 
+
  #in your list
  jim@jimandkoka.com-+-Jim
- 
+
  #then
  $dynamic->merge_delimiter('-+-');
- 
+
  #in your list
  jim@jimandkoka.com,Jim
- 
+
  #then
  $dynamic->merge_delimiter(',');
- 
+
 Just be sure that your delimiting string occurs *only* as the delimiter and is never embedded in your data.
 No escaping of a delimiter is possible.
 
@@ -265,22 +265,22 @@ __PACKAGE__->add_attr("merge_delimiter");
 
 It can be useful to to do a mail merge with non-address specific data. For example, you may want to
 put today's date in your subject. But it's silly (if not impossible) to populate that data out to all
-of your addresses. This is where the global_merge comes in. 
+of your addresses. This is where the global_merge comes in.
 
  $dynamic->global_merge(
  	{
  		"<DATE>" => scalar localtime
  	}
  );
- 
+
  or, at creation:
- 
+
  my $dynamic = Mail::Bulkmail::Dynamic->new(
  	"global_merge" => {
  		"<DATE>" => scalar localtime
  	}
  );
- 
+
 <DATE> will now change to today's date in your message.
 
  "Hello, list member. This is the list for <DATE>"
@@ -322,7 +322,7 @@ This is probably easiest explained via examples. dynamic_message_data is a hashr
  		}
  	}
  );
- 
+
 Now then, your merge keys could be defined as such:
 
  ->merge_keys([qw(BULK_EMAIL <name> <age> BULK_DYNAMIC_MESSAGE)]);
@@ -335,25 +335,25 @@ Your list would be:
 
 And finally, your message would be:
 
- <personalized>. Judging by your age, which is <age>, you should enjoy <agegroup>. 
+ <personalized>. Judging by your age, which is <age>, you should enjoy <agegroup>.
  Oh, and <animallover>
- 
+
 The messages sent out would be, respectively:
 
- Hi there, Mr. Foo. Judging by your age, which is 23, you should enjoy working. 
+ Hi there, Mr. Foo. Judging by your age, which is 23, you should enjoy working.
  Oh, and I see you hate animals.
 
- Hi there. Judging by your age, which is 78, you should enjoy napping. 
+ Hi there. Judging by your age, which is 78, you should enjoy napping.
  Oh, and I see you like animals.
 
- Hi there, John Jr.. Judging by your age, which is 14, you should enjoy playing. 
+ Hi there, John Jr.. Judging by your age, which is 14, you should enjoy playing.
  Oh, and I see you like animals.
 
 See? easy as pie. Your dynamic message should be specified in your merge_keys as BULK_DYNAMIC_MESSAGE,
 and should be a delimited string (in this case).
 
  agegroup=20-40;<animallover>=hates_animals;<personilized>=yes
- 
+
 You can specify what delimiters you'd like to use. In this case, your dynamic_message_delimiter is ';',
 and your dynamic_message_value_delimiter is '='.
 
@@ -376,9 +376,9 @@ This is also perfectly acceptable:
  		}
  	}
  );
- 
+
   me@there.com::Bob Hope::78::agegroup=over70
- 
+
 As long as you use the same keys, you're fine.
 
 So you should be able to easily see that we'll look up the message associated with being in the agegroup
@@ -393,11 +393,11 @@ Don't use the same tokens for mailmerges and dynamic messages, since the system 
 Alternatively, instead of a delimited string, you may pass in an arrayref of strings:
 
  [qw(agegroup=20-40 <animallover>=hates_animals <personilized>=yes)]
- 
+
 or an arrayref of arrayrefs:
 
  [[qw(agegroup 20-40)], [qw(<animallover> hates_animals)], [qw(<personlized> yes)]]
- 
+
 or a hashref:
 
  {
@@ -405,7 +405,7 @@ or a hashref:
 	 animallover	=> hates_animals
 	 personilized	=> yes
  }
- 
+
 Passing in a hashtable is the fastest in terms of internal processing, but there may be additional
 work on your end to generate the hash. When reading from a file, you should always use delimited strings
 (since that's what'd be in your file anyway), but from other sources you can experiment with hashrefs
@@ -413,7 +413,7 @@ or arrayrefs and see which is faster for your uses.
 
 dynamic messages apply to B<only> message information. use dynamic_header_data for dynamic pieces in headers.
 
-Note that the dynamic message creation will be performed in an arbitrary order. So don't expect to 
+Note that the dynamic message creation will be performed in an arbitrary order. So don't expect to
 have one piece of the dynamic message populate into your message before another one.
 
 There is one special key for dynamic_message_data, "_default".
@@ -447,14 +447,14 @@ Using our earlier example, with the following list:
 
 And the same message of:
 
- <personalized>. Judging by your age, which is <age>, you should enjoy <agegroup>. 
+ <personalized>. Judging by your age, which is <age>, you should enjoy <agegroup>.
  Oh, and <animallover>
- 
+
 The messages sent out would be, respectively:
 
- . Judging by your age, which is 23, you should enjoy working. 
+ . Judging by your age, which is 23, you should enjoy working.
  Oh, and I don't know how you feel about animals.
- 
+
 Note that since <agegroup> was specified, we used that value. Since <animallover> was not specified,
 the default was used, and since <personalized> was not specified and has no default, it was simply wiped out.
 
@@ -470,31 +470,31 @@ __PACKAGE__->add_attr('dynamic_message_data');
 If you're reading in from a file, you can't have arrayrefs, hashrefs, whatever. They don't store nicely
 in text. So your data will probably be a delimited string. In that case, you need to know the delimiter.
 Set it with dynamic_message_delimiter. Note that your dynamic message data is just an entry in your
-merge data. We'll assume a merge_delimiter of '::' and a dynamic_message_value_delimiter of '=' for 
+merge data. We'll assume a merge_delimiter of '::' and a dynamic_message_value_delimiter of '=' for
 these examples
 
  ->merge_keys([qw(BULK_EMAIL <name> BULK_DYNAMIC_MESSAGE)]);
 
  #in your list
  jim@jimandkoka.com::Jim::agegroup=20-40;animallover=yes
- 
+
  #then
  $dynamic->dynamic_message_delimiter(";");
- 
+
  #in your list
  jim@jimandkoka.com::Jim::agegroup=20-40&animallover=yes
- 
+
  #then
  $dynamic->dynamic_message_delimiter('&');
- 
+
  #in your list
  jim@jimandkoka.com::Jim::agegroup=20-40,,animallover=yes
- 
+
  #then
  $dynamic->dynamic_message_delimiter(',,');
- 
+
 Just be sure that your delimiting string occurs *only* as the delimiter and is never embedded in your data.
-No escaping of a delimiter is possible. 
+No escaping of a delimiter is possible.
 
 =cut
 
@@ -514,24 +514,24 @@ examples
 
  #in your list
  jim@jimandkoka.com::Jim::agegroup=20-40;animallover=yes
- 
+
  #then
  $dynamic->dynamic_message_value_delimiter("=");
- 
+
  #in your list
  jim@jimandkoka.com::Jim::agegroup:=20-40;animallover:=yes
- 
+
  #then
  $dynamic->dynamic_message_value_delimiter(':=');
- 
+
  #in your list
  jim@jimandkoka.com::Jim::agegroup--20-40;animallover--yes
- 
+
  #then
  $dynamic->dynamic_message_value_delimiter('--');
- 
+
 Just be sure that your delimiting string occurs *only* as the delimiter and is never embedded in your data.
-No escaping of a delimiter is possible. 
+No escaping of a delimiter is possible.
 
 =cut
 
@@ -568,7 +568,7 @@ This is probably easiest explained via examples. dynamic_header_data is a hashre
  		}
  	}
  );
- 
+
 Now then, your merge keys could be defined as such:
 
  ->merge_keys([qw(BULK_EMAIL <name> <age> BULK_DYNAMIC_MESSAGE BULK_DYNAMIC_HEADERS)]);
@@ -578,17 +578,17 @@ Your list would be:
  foo@bar.com::Mr. Foo::23::agegroup=20-40;animallover=hates_animals;personalized=yes::Subject=polite;Reply-To:useful;X-Type:gold
  me@there.com::Bob Hope::78::agegroup=over70;animallover=likes_animals;personalized=no::Subject=rude;Reply-To:useful;X-Type:premium
  john@junior.com::John Jr.::14::agegroup=under20;animallover=likes_animals;personalized=yes::Subject=impolite;Reply-To:useless;X-Type:none
- 
+
 The messages sent out would have the following headers, respectively:
 
  Subject : Hello, sir
  Reply-To: return@myaddress.com
  X-Type  : Most services are available
- 
+
  Subject : Hey, jerk-off
  Reply-To: return@myaddress.com
  X-Type  : All Services are available
- 
+
  Subject : Hello
  Reply-To: nowhere@noemail.com
  X-Type  : No services are available
@@ -598,7 +598,7 @@ See? easy as pie. Your dynamic headers should be specified in your merge_keys as
 and should be a delimited string (in this case).
 
 Subject=polite;Reply-To=useful;X-Type=gold
- 
+
 You can specify what delimiters you'd like to use. In this case, your dynamic_header_delimiter is ';',
 and your dynamic_header_value_delimiter is '='.
 
@@ -619,11 +619,11 @@ Don't use the same tokens for mailmerges and dynamic headers, since the system m
 Alternatively, instead of a delimited string, you may pass in an arrayref of strings:
 
  [qw(Subject=polite Reply-To=useful X-Type:gold)]
- 
+
 or an arrayref of arrayrefs:
 
  [[qw(Subject polite)], [qw(Reply-To useful)], [qw(X-Type gold)]]
- 
+
 or a hashref:
 
  {
@@ -631,7 +631,7 @@ or a hashref:
 	 Reply-To		=> useful
 	 X-Type			=> gold
  }
- 
+
 Passing in a hashtable is the fastest in terms of internal processing, but there may be additional
 work on your end to generate the hash. When reading from a file, you should always use delimited strings
 (since that's what'd be in your file anyway), but from other sources you can experiment with hashrefs
@@ -639,7 +639,7 @@ or arrayrefs and see which is faster for your uses.
 
 dynamic headers apply to B<only> header information. use dynamic_message_data for dynamic pieces in messages.
 
-Note that the dynamic header creation will be performed in an arbitrary order. So don't expect to 
+Note that the dynamic header creation will be performed in an arbitrary order. So don't expect to
 have one piece of the dynamic header populate into your message before another one.
 
 There is one special key for dynamic_header_data, "_default".
@@ -681,7 +681,7 @@ i.e., the order that a header will be checked is:
  2) Is there a default header key for the header? (Subject => _default)
  3) Is this a specialty header (i.e., ->From), and is that set? ($bulk->From())
  4) Is there a generic, non-dynamic header set? (->header('Foo'))
- 
+
 Headers will not be set more than once, no matter how many places you specify them.
 
 =cut
@@ -695,31 +695,31 @@ __PACKAGE__->add_attr('dynamic_header_data');
 If you're reading in from a file, you can't have arrayrefs, hashrefs, whatever. They don't store nicely
 in text. So your data will probably be a delimited string. In that case, you need to know the delimiter.
 Set it with dynamic_header_delimiter. Note that your dynamic header data is just an entry in your
-merge data. We'll assume a merge_delimiter of '::' and a dynamic_header_value_delimiter of '=' for 
+merge data. We'll assume a merge_delimiter of '::' and a dynamic_header_value_delimiter of '=' for
 these examples
 
  ->merge_keys([qw(BULK_EMAIL <name> BULK_DYNAMIC_HEADERS)]);
 
  #in your list
  jim@jimandkoka.com::Jim::Subject=polite;Reply-To=useful
- 
+
  #then
  $dynamic->dynamic_message_delimiter(";");
- 
+
  #in your list
  jim@jimandkoka.com::Jim::Subject=polite&Reply-To=useful
- 
+
  #then
  $dynamic->dynamic_message_delimiter('&');
- 
+
  #in your list
  jim@jimandkoka.com::Jim::Subject=polite,,Reply-To=useful
- 
+
  #then
  $dynamic->dynamic_message_delimiter(',,');
- 
+
 Just be sure that your delimiting string occurs *only* as the delimiter and is never embedded in your data.
-No escaping of a delimiter is possible. 
+No escaping of a delimiter is possible.
 
 =cut
 
@@ -739,24 +739,24 @@ examples
 
  #in your list
  jim@jimandkoka.com::Jim::Subject=polite;Reply-To=useful
- 
+
  #then
  $dynamic->dynamic_message_value_delimiter("=");
- 
+
  #in your list
  jim@jimandkoka.com::Jim::Subject:=polite;Reply-To:=useful
- 
+
  #then
  $dynamic->dynamic_message_value_delimiter(':=');
- 
+
  #in your list
  jim@jimandkoka.com::Jim::Subject--polite;Reply-To--useful
- 
+
  #then
  $dynamic->dynamic_message_value_delimiter('--');
- 
+
 Just be sure that your delimiting string occurs *only* as the delimiter and is never embedded in your data.
-No escaping of a delimiter is possible. 
+No escaping of a delimiter is possible.
 
 =cut
 
@@ -774,7 +774,7 @@ While mailmerging, you can specify keys that would contain regex meta data.
 For example:
 
  ->merge_keys [qw(*name* BULK_EMAIL)]
- 
+
 Would generate an error, because the * character has special meaning to a regex. With quotemeta turned on,
 you can use that as a token because it will be quoted when used in the regex.
 
@@ -790,7 +790,7 @@ __PACKAGE__->add_attr('quotemeta');
 
 In this subclass, use_envelope is a method that will always return 0.
 
-For Dynamic messages, it's impossible to use the envelope. Sorry, gang, if you want to 
+For Dynamic messages, it's impossible to use the envelope. Sorry, gang, if you want to
 use mail merges, then you can't use the added speed that the envelope provides you with.
 
 And it only makes sense, because envelope sending sends the exact same message to multiple people.
@@ -831,7 +831,7 @@ sub extractEmail {
 
 	#if this is a hash, then we'll assume that we want the BULK_EMAIL key out of it.
 	if (ref $data eq "HASH"){
-		
+
 		#return the BULK_EMAIL key if we have it, an error otherwise
 		if ($data->{"BULK_EMAIL"}){
 			return $self->valid_email($data->{"BULK_EMAIL"});
@@ -870,12 +870,12 @@ This method is known to be able to return:
 sub buildHeaders {
 	my $self = shift;
 	my $data = shift;
-	
+
 
 	my $headers = undef;
 
 	$headers .= "Date:" . $self->Date . "\015\012";
-	
+
 	# keep track of the headers that we have set from dynamic_header_data
 	my $set = {};
 
@@ -884,17 +884,17 @@ sub buildHeaders {
 
 			my $subkey = $data->{"BULK_DYNAMIC_HEADERS"}->{$key} || '_default';
 			my $val = $self->dynamic_header_data->{$key}->{$subkey};
-			
+
 			next if ! defined $val || $val !~ /\S/;
-			
+
 			next if $set->{$key}++;
-			
+
 			$headers .= $key . ":" . $val . "\015\012";
 		};
 	};
-	
+
 	#now, we take care of our regular headers, including the ones that could return errors if not present
-	
+
 	unless ($set->{"From"}){
 		if (my $from = $self->From){
 			$headers .= "From:" . $from . "\015\012";
@@ -903,7 +903,7 @@ sub buildHeaders {
 			return $self->error("Cannot bulkmail...no From address", "MBD013");
 		};
 	};
-	
+
 	$headers .= "Subject:" . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
 
 	unless ($set->{"To"}){
@@ -914,10 +914,10 @@ sub buildHeaders {
 			return $self->error("Cannot bulkmail...no To address", "MBD014");
 		};
 	};
-	
+
 	$headers .= "Sender:"			. ($self->Sender || $self->From)		. "\015\012" unless $set->{"Sender"};
 	$headers .= "Reply-To:"			. ($self->ReplyTo || $self->From)		. "\015\012" unless $set->{"ReplyTo"};
-	
+
 	#we're always going to specify at least a list precedence
 	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};
 
@@ -940,30 +940,30 @@ sub buildHeaders {
 	foreach my $key (keys %{$self->_headers}) {
 		next if $key eq 'Content-type';
 		my $val = $self->_headers->{$key};
-		
+
 		next if ! defined $val || $val !~ /\S/;
-		
+
 		next if $set->{$key}++;
-		
+
 		$headers .= $key . ":" . $val . "\015\012";
 	};
-	
+
 	#do our global value merge
 	if ($self->global_merge){
-	
+
 		#iterate through the keys of the global_merge hash, and swap them with the relevant values
 		#this is part of our mail merge, but not the main customization
-		
+
 		foreach my $key (keys %{$self->global_merge}){
 			my $val = $self->global_merge->{$key} || '';
 			my $key = $self->quotemeta() ? "\Q$key\E" : $key;
 			$headers =~ s/$key/$val/g;
 		};
 	};
-	
+
 	#if we have a mail merge, then do it.
 	if (ref $data eq "HASH"){
-		
+
 		#iterate through the keys of the merge_hash, and swap them with the relevant values
 		#this is our mailmerge
 		foreach my $key (keys %$data){
@@ -973,7 +973,7 @@ sub buildHeaders {
 			$headers =~ s/$key/$val/g;
 		};
 	};
-	
+
 	$headers = $self->_force_wrap_string($headers, 'start with a blank', 'no blank lines');
 
 	$headers .= "\015\012";	#blank line between the header and the message
@@ -1002,15 +1002,15 @@ This method is known to be able to return:
 sub buildMessage {
 	my $self = shift;
 	my $data = shift;
-	
+
 	#Mail::Bulkmail builds the message for us just fine, then we'll do the mail merge into it.
 	my $message = $self->Message()
 		|| return $self->error("Cannot build message w/o message", "MBD012");
-		
+
 	#first of all, dynamically build a message, if so desired
 	if (ref $data eq "HASH" && $data->{"BULK_DYNAMIC_MESSAGE"}){
 		foreach my $key (keys %{$self->dynamic_message_data}) {
-		
+
 			my $subkey = $data->{"BULK_DYNAMIC_MESSAGE"}->{$key} || '_default';
 			my $val = $self->dynamic_message_data->{$key}->{$subkey} || '';
 
@@ -1018,23 +1018,23 @@ sub buildMessage {
 			$message =~ s/$key/$val/g;
 		};
 	};
-	
+
 	#do our global value merge
 	if ($self->global_merge){
-	
+
 		#iterate through the keys of the global_merge hash, and swap them with the relevant values
 		#this is part of our mail merge, but not the main customization
-		
+
 		foreach my $key (keys %{$self->global_merge}){
 			my $val = $self->global_merge->{$key} || '';
 			my $key = $self->quotemeta() ? "\Q$key\E" : $key;
 			$message =~ s/$key/$val/g;
 		};
 	};
-	
+
 	#if we have a mail merge, then do it.
 	if ($self->merge_keys || ref $data eq 'HASH'){
-		
+
 		#iterate through the keys of the merge_hash, and swap them with the relevant values
 		#this is our mailmerge
 		foreach my $key (keys %$data){
@@ -1048,16 +1048,16 @@ sub buildMessage {
 
 	#sendmail-ify our line breaks
 	$message =~ s/(?:\r?\n|\r\n?)/\015\012/g;
-	
+
 	#double any periods that start lines
 	$message =~ s/^\././gm;
-	
+
 	#and force a CRLF at the end, unless one is already present
 	$message .= "\015\012" unless $message =~ /\015\012$/;
 	$message .= ".";
-	
+
 	$message = $self->_force_wrap_string($message);
-	
+
 	return \$message;
 };
 
@@ -1076,7 +1076,7 @@ Still called internally and still not something you need to worry about.
 sub preprocess {
 	my $self = shift;
 	my $data = shift;
-	
+
 	#make sure it's a reference
 	$data = $self->SUPER::preprocess($data) || return undef;
 
@@ -1098,9 +1098,9 @@ sub preprocess {
 		$data->{"BULK_DYNAMIC_HEADERS"} = $self->SUPER::preprocess($data->{"BULK_DYNAMIC_HEADERS"}) || return undef;
 		$data->{"BULK_DYNAMIC_HEADERS"} = $self->buildDynamicHeaderHash($data->{"BULK_DYNAMIC_HEADERS"}) || return undef;
 	};
-	
+
 	return $data;
-	
+
 };
 
 =pod
@@ -1117,13 +1117,13 @@ This method is known to be able to return:
  MBD002 - no merge_delimiter
  MBD003 - different number of keys and values
  MBD004 - cannot bulid merge hash
- 
+
 =cut
 
 sub buildMergeHash {
 	my $self = shift;
 	my $data = shift;
-		
+
 	#if it's a hashref, then just return it. We'll use that as the keys AND values and
 	#completely ignore whatever's in merge_keys
 	#we're putting this first because it should be the most common case
@@ -1140,13 +1140,13 @@ sub buildMergeHash {
 
 		return $self->error("I won't attempt a mail merge unless there are the same number of keys and values", "MBD003")
 			unless @values == @{$self->merge_keys};
-		
+
 		#we need to create the hash to return
 		my $mergehash = {};
 		foreach my $key (@{$self->merge_keys}){
 			$mergehash->{$key} = shift @values;
 		};
-		
+
 		return $mergehash;
 	}
 	#arrays behave just like strings, but we don't need to split the string into an arrayref first
@@ -1157,11 +1157,11 @@ sub buildMergeHash {
 
 		#we need to create the hash to return
 		my $mergehash = {};
-		
+
 		#I'm not going to shift off of @$data, because I want to leave the arrayref intact, but it'd be
 		#wasteful to de-reference it here and shift off the copy. So we'll just increment through it
 		my $i = 0;
-		
+
 		foreach my $key (@{$self->merge_keys}){
 			$mergehash->{$key} = $data->[$i++];
 		};
@@ -1189,7 +1189,7 @@ This method is known to be able to return:
  MBD006 - cannot split w/o dynamic_message_value_delimiter
  MBD007 - invalid dynamic message key
  MBD008 - cannot build dynamic message hash
- 
+
 =cut
 
 sub buildDynamicMessageHash {
@@ -1207,24 +1207,24 @@ sub buildDynamicMessageHash {
 
 		my $delimiter = quotemeta($self->dynamic_message_delimiter())
 			|| return $self->error("Cannot split without a dynamic_message_delimiter", "MBD005");
-			
+
 		my $eqdelimiter = quotemeta($self->dynamic_message_value_delimiter())
 			|| return $self->error("Cannot split without a dynamic_message_value_delimiter", "MBD006");
-				
+
 		my @values = split(/$delimiter/, $$data);
 
 		#we need to create the hash to return
 		my $dynamicmessagehash = {};
-	
+
 		foreach my $pair (@values){
 			my ($key, $value) = split(/$eqdelimiter/, $pair);
-			
+
 			return $self->error("Invalid dynamic message key : $key", "MBD007")
 				unless exists $self->dynamic_message_data->{$key};
-			
+
 			$dynamicmessagehash->{$key} = $value;
 		};
-		
+
 		return $dynamicmessagehash;
 	}
 	#arrays behave just like strings, but we don't need to split the string into an arrayref first
@@ -1232,7 +1232,7 @@ sub buildDynamicMessageHash {
 
 		#we need to create the hash to return
 		my $dynamicmessagehash = {};
-		
+
 		foreach my $pair (@$data){
 			my ($key, $value);
 			if (ref $pair){
@@ -1246,7 +1246,7 @@ sub buildDynamicMessageHash {
 
 			$dynamicmessagehash->{$key} = $value;
 		};
-		
+
 		return $dynamicmessagehash;
 	}
 	#and, finally, if it's none of the above, then we can't deal with it, so return an error.
@@ -1270,7 +1270,7 @@ This method is known to be able to return:
  MBD009 - cannot split w/o dynamic_header_value_delimiter
  MBD010 - invalid dynamic header key
  MBD011 - cannot build dynamic header hash
- 
+
 =cut
 
 
@@ -1289,21 +1289,21 @@ sub buildDynamicHeaderHash {
 
 		my $delimiter = quotemeta($self->dynamic_header_delimiter())
 			|| return $self->error("Cannot split without a dynamic_header_delimiter", "MBD008");
-			
+
 		my $eqdelimiter = quotemeta($self->dynamic_header_value_delimiter())
 			|| return $self->error("Cannot split without a dynamic_header_value_delimiter", "MBD009");
-			
+
 		my @values = split(/$delimiter/, $$data);
 
 		#we need to create the hash to return
 		my $dynamicheaderhash = {};
-	
+
 		foreach my $pair (@values){
 			my ($key, $value) = split(/$eqdelimiter/, $pair);
-			
+
 			return $self->error("Invalid dynamic header key : $key", "MBD010")
 				unless exists $self->dynamic_header_data->{$key};
-				
+
 			$dynamicheaderhash->{$key} = $value;
 		};
 
@@ -1314,7 +1314,7 @@ sub buildDynamicHeaderHash {
 
 		#we need to create the hash to return
 		my $dynamicheaderhash = {};
-		
+
 		foreach my $pair (@$data){
 			my ($key, $value);
 			if (ref $pair){
@@ -1328,7 +1328,7 @@ sub buildDynamicHeaderHash {
 
 			$dynamicheaderhash->{$key} = $value;
 		};
-		
+
 		return $dynamicheaderhash;
 	}
 	#and, finally, if it's none of the above, then we can't deal with it, so return an error.
@@ -1363,7 +1363,7 @@ sub convert_to_scalar {
 	else {
 		return ref $value eq 'HASH' ? $value->{"BULK_EMAIL"} : $self->SUPER::convert_to_scalar($value);
 	};
-	
+
 };
 
 1;
@@ -1386,9 +1386,9 @@ __END__
  	"From"		=> 'me@mydomain.com',
  	"Reply-To"	=> 'replies@mydomain.com'
  ) || die Mail::Bulkmail::Dynamic->error();
- 
+
  $bulk->bulkmail || die $bulk->error;
- 
+
 #simple merge example. Assume that this is your list file:
 
  test1@yourdomain.com::Person #1
@@ -1403,8 +1403,8 @@ __END__
  	"Reply-To"	=> 'replies@mydomain.com',
  	"merge_keys" => [qw(BULK_EMAIL NAME)]
  ) || die Mail::Bulkmail::Dynamic->error();
- 
- $bulk->bulkmail || die $bulk->error; 
+
+ $bulk->bulkmail || die $bulk->error;
 
 #simple dynamic message example. Assume that this is your list file:
 
@@ -1427,8 +1427,8 @@ __END__
  		}
  	}
  ) || die Mail::Bulkmail::Dynamic->error();
- 
- $bulk->bulkmail || die $bulk->error; 
+
+ $bulk->bulkmail || die $bulk->error;
 
 #simple dynamic message example with two dynamic components. Assume that this is your list file:
 
@@ -1456,8 +1456,8 @@ __END__
  		}
  	}
  ) || die Mail::Bulkmail::Dynamic->error();
- 
- $bulk->bulkmail || die $bulk->error; 
+
+ $bulk->bulkmail || die $bulk->error;
 
 #simple dynamic message example with a dynamic message, and a dynamic header component. Assume that this is your list file:
 
@@ -1492,8 +1492,8 @@ __END__
  		}
  	}
  ) || die Mail::Bulkmail::Dynamic->error();
- 
- $bulk->bulkmail || die $bulk->error; 
+
+ $bulk->bulkmail || die $bulk->error;
 
 
 =head1 SEE ALSO

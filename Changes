@@ -1,5 +1,21 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.06 Tue Mar 25, 2003
+	- No longer even attempts to connect to a server if you haven't specified the Tries parameter
+	- You can now change the text of the Message after bulkmailing or mailing
+	  (This means you may change the non-merged, non-dynamic text via a new call to ->Message,
+	   it is recommended that you do not do this unless you know why you are doing it. dynamic
+	   messages and mail merges will do what you want 99% of the time)
+	- added some entries to the FAQ
+	- ->error now returns () in a list context, undef in a scalar context
+	- added some more documentation
+	- the constructor now operates on passed keys/values in the order they were passed
+	- added message_from_file flag to load in a message from a file on disk
+	- added headers_from_message to extract message headers from the value passed to ->Message
+	- you may now unset From, To, Sender, Reply-To headers by calling the relevant method and passing an undef
+	  as customary with the returns from ->header, will return 0 if you successfully set a header to undef
+	- if you wish, for some foolish reason, to name one of your log files "0", you may now do that.
+
 3.05 Thu Feb 6, 2003
 	- *mutter* fixed a flaw in my test suite
 	  (thanks to an error reported by Ben Wrigley)
@@ -15,7 +31,7 @@ Revision history for Perl module Mail::Bulkmail.
 	  This wasn't terribly important, since the header wouldn't be set in the message if it
 	  was empty, but it was good for consistency's sake. Also, if you set a header to undef,
 	  the method now returns 0, for a non-true but defined value.
-	- All VERSION numbers now reference the master version number in Mail::Bulkmail::Object
+	- All $VERSION numbers now reference the master version number in Mail::Bulkmail::Object
 	- Fixed a bug where trying to call ->header in Mail::Bulkmail::Dynamic w/o using
 	  dynamic_header_data would cause a crash.
 	  (thanks to Justin Simoni for catching this)
@@ -23,18 +39,20 @@ Revision history for Perl module Mail::Bulkmail.
 	- Will now bubble up error codes from methods called at construction instead of replacing
 	  with the default code. Still uses the default codes if one is not passed.
 	- Fixed an obscure error that might have caused a slightly incorrect error message
-	  if there's a failure during construction. 
+	  if there's a failure during construction.
 	- Wrappered the alarm calls in evals to catch them on systems that don't implement it.
 	  (like some stupid versions of activeperl on windows)
 
 3.03 Fri Jan 24, 2003
-	- Fixed a potentially disasterous bug that could cause the system to hang infinitely if there's a severely mal-formed Message
+	- Fixed a potentially disasterous bug that could cause the system to hang
+	  infinitely if there's a severely mal-formed Message
 	- fixed a minor logging error that could cause some errors to be logged twice
 	- DummyServer now says EHLO, to be consistent with Server
 	- if using a coderef for logging/reading, now gets the bulkmail object as its first argument
 	- Mail::Bulkmail::Server now has a CONVERSATION log, to aid in debugging.
-	- Magically fixed another bug in envelope sending. I can't say exactly what it was or how it was fixed or when it manifested itself, but
-	  it was there. (again, many thanks to Tim de Wolf for his continued help in tracking this down)
+	- Magically fixed another bug in envelope sending. I can't say exactly what it was or how it 
+	  was fixed or when it manifested itself, but it was there.
+	  (again, many thanks to Tim de Wolf for his continued help in tracking this down)
 
 3.02 Thu Jan 23, 2003
 	- Fixed a bug in envelope sending that I can't believe I managed to allow into the final release.
@@ -79,92 +97,92 @@ Revision history for Perl module Mail::Bulkmail.
 	- Added log_full_line flag.
 	- Trusting is now more trusting.
 	- Domains can once again be banned.
-	- Error checking is done less often and in a slightly 
+	- Error checking is done less often and in a slightly
 	  different order now
 	- ->bulkmail now returns 1 on success.  Doh.
-	- Fixed an annoyingly subtle bug with construction of 
+	- Fixed an annoyingly subtle bug with construction of
 	  dynamic messages
 	- Repaired a long-standing bug in the docs.
 
 2.03  Tues Aug 22, 2000
 	- Tweaked the constructor
-	- Enhanced the 'error' method so it can behave as a 
+	- Enhanced the 'error' method so it can behave as a
 	  class method
 	- Enhanced HFM
 	- Enhanced the test suite
 	- various bug fixes
 
 2.01  Wed Aug 16, 2000
-	- Fixed a mindnumblingly dumb bug whereby merge and 
+	- Fixed a mindnumblingly dumb bug whereby merge and
 	  dynamic hashes weren't initialized.
 
 2.00  Fri Aug 11, 2000
-	- Re-wrote everything.  Literally _everything_.  Total 
-	  re-write.  
+	- Re-wrote everything.  Literally _everything_.  Total
+	  re-write.
 	- Added in support for dynamic messaging.
 	- Added in support for envelope sending.
 	- Added in ability to import lists from more sources.
-	- Mail::Bulkmail should now behave absolutely perfectly 
+	- Mail::Bulkmail should now behave absolutely perfectly
 	  with -w and use strict.
-	- Did I mention that this is a ground-up re-write?  Your 
+	- Did I mention that this is a ground-up re-write?  Your
 	  existing code will need to be tweaked slightly to use
 	  the new module.
 
 
 1.11  Tue Nov 09, 1999
-	- Banned addresses now checks entire address case 
+	- Banned addresses now checks entire address case
 	  insensitively instead of leaving the local part
 	  alone. Better safe than sorry.
 	- $self->fmdl is now used to split BULK_FILEMAP
-	- Various fixes suggested by Chris Nandor to make -w 
+	- Various fixes suggested by Chris Nandor to make -w
 	  shut up.
-	- Changed the way to provide local maps to mail and 
+	- Changed the way to provide local maps to mail and
 	  bulkmail so it's more intuitive.
 
-1.10  Wed Sep 08, 1999 
+1.10  Wed Sep 08, 1999
 	- Several little fixes.
-	- The module will now re-connect if it receives a 221 
+	- The module will now re-connect if it receives a 221
 	  (connection terminated) message from the server.
-	- Fixed a potential near-infinite loop in the 
+	- Fixed a potential near-infinite loop in the
 	  _valid_email routine.
-	- _valid_email now merrily strips away comments 
+	- _valid_email now merrily strips away comments
 	  (even nested ones).  :)
 	- hfm (headers from message) method added.
 	- fmdl (filemap delimiter) method added.
 
 1.01  Wed Sep, 01, 1999
 	- Fixed a bug in the email validation routine which
-	  would cause the module to hang severely on certain 
-	  malformed addresses.  All is once again right with 
+	  would cause the module to hang severely on certain
+	  malformed addresses.  All is once again right with
 	  the world.
-	- Altered default date generation to be RFC 1123 
+	- Altered default date generation to be RFC 1123
 	  compliant (4 digit year)
 	- changed date generation so that it adds a space after
-	  the comma after the day.  This is because of a bug in 
+	  the comma after the day.  This is because of a bug in
 	  Outlook that wouldn't recognize the date w/o the space.
 
-1.00  Wed Aug 18, 1999 
+1.00  Wed Aug 18, 1999
 	- First public release onto CPAN
-      
+
 0.93  Thu Aug 12, 1999
 	- Re-vamped the documentation substantially.
 
 0.92  Thu Aug 12, 1999
-	- Started adding a zero in front of the version name, 
+	- Started adding a zero in front of the version name,
 	  just like I always should have
 	- Changed accessing of non-standard headers so that they
-	  have to be accessed and retrieved via the "headset" 
-	  method.  This is because methods cannot have non-word 
-	  characters in them.  From, Subject, and Precedence 
-	  headers may also be accessed via headset, if you so 
+	  have to be accessed and retrieved via the "headset"
+	  method.  This is because methods cannot have non-word
+	  characters in them.  From, Subject, and Precedence
+	  headers may also be accessed via headset, if you so
 	  choose.
-	- AUTOLOAD now complains loudly (setting ->error and 
+	- AUTOLOAD now complains loudly (setting ->error and
 	  printing to STDERR) if it's called.
 
 .91   Wed Aug 11, 1999
 	- Fixed bugs in setting values which require validation
 	  checks.
-	- Fixed accessing of non-standard headers so that the 
+	- Fixed accessing of non-standard headers so that the
 	  returns are identical to every other accesor method.
 
 .90   Tue Aug 10, 1999

@@ -30,7 +30,7 @@ that would be going to the server to a file instead. This file should be specifi
  #in your conf file
  define package Mail::Bulkmail::DummyServer
  dummy_file	= ./my.dummy.file
- 
+
 Now, instead of sending commands to your SMTP relay, they'll get sent to ./my.dummy.file for easy
 inspection at a later date.
 
@@ -63,7 +63,7 @@ __PACKAGE__->add_class_attr('dummy_file');
 # this is used for tied filehandles to internally hold the dummy socket
 __PACKAGE__->add_attr('_socket');
 
-=pod 
+=pod
 
 =head1 METHODS
 
@@ -82,11 +82,11 @@ This method is known to return
 
 sub connect {
 	my $self = shift;
-	
+
 	local *SOCKET;
-	
+
 	tie *SOCKET, "Mail::Bulkmail::DummyServer";
-	
+
 	$self->socket(\*SOCKET);
 
 	#We're either given a domain, or we'll build it based on who the message is from
@@ -111,11 +111,11 @@ sub TIEHANDLE {
 	my $c = Mail::Bulkmail::Object->read_conf_file;
 
 	my $file = $class->dummy_file();
-	
+
 	my $handle = Mail::Bulkmail::Object->gen_handle();
-	
+
 	open ($handle, ">>$file") || die $!;
-	
+
 	return $class->new('_socket' => $handle);
 };
 
@@ -137,7 +137,7 @@ sub PRINT {
 	if ($_[0] eq 'RSET'){
 		print $f "--------NEW MESSAGE (connection reset)-------" if $f;
 	};
-	
+
 	print $f @_ if $f;
 
 	return 1;
@@ -182,7 +182,7 @@ sub disconnect {
 
 	$self->talk_and_respond('RSET') unless $quietly;	#just to be polite
 	$self->talk_and_respond('quit') unless $quietly;
-	
+
 	$self->socket(undef);
 	$self->connected(0);
 	return $self;
