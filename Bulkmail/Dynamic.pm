@@ -549,7 +549,7 @@ in terms of behavior, but it operates on the message header instead of the messa
 
 This is probably easiest explained via examples. dynamic_header_data is a hashref of hashrefs, such as this:
 
- $dynamic->dynamic_message_data(
+ $dynamic->dynamic_header_data(
  	{
  		'Subject' => {
  			'polite'	=> "Hello, sir",
@@ -642,23 +642,6 @@ dynamic headers apply to B<only> header information. use dynamic_message_data fo
 Note that the dynamic header creation will be performed in an arbitrary order. So don't expect to 
 have one piece of the dynamic header populate into your message before another one.
 
-Also be warned that dynamic headers will NOT erase previously set headers. So your headers must be either all
-dynamic or all non-dynamic or confusion may result.
-
-i.e., assume the above example, but that you also did:
-
- $dynamic->Subject("Foo");
- 
-Your message would contain:
-
- Subject : Foo
- .
- .
- .
- Subject : Hello, sir
- 
-Which will display inconsistently. So don't set any headers if you're using dynamic_header_data
-
 There is one special key for dynamic_header_data, "_default".
 
  $dynamic->dynamic_message_data(
@@ -687,9 +670,19 @@ Behavior is similar to that of _default in dynamic_message_data. If a header is 
 If no value is specified, it will attempt to use the _default value. But, in this case, if there is no
 value passed and no default, then the header just won't be set. Unless it is one of the speciality headers,
 such as From. In that case, it will attempt a specific dynamic_message_data value for From, then the
-"_default" value in dynamic_message_data for from, and then finally the ->From value itself. The speciality
-header is roughly equivalent to setting a _default value, so please only use one or the other. Using both
-is redundant.
+"_default" value in dynamic_message_data for from, and then finally the ->From value itself.
+
+If there's a header specified in ->dynamic_header_data, it will be preferred to use over one
+set via ->header.
+
+i.e., the order that a header will be checked is:
+
+ 1) Is there a specific header key for the header? (Subject => polite)
+ 2) Is there a default header key for the header? (Subject => _default)
+ 3) Is this a specialty header (i.e., ->From), and is that set? ($bulk->From())
+ 4) Is there a generic, non-dynamic header set? (->header('Foo'))
+ 
+Headers will not be set more than once, no matter how many places you specify them.
 
 =cut
 
@@ -812,73 +805,6 @@ sub use_envelope { return 0};
 
 =pod
 
-=item header
-
-->header is externally identical to the ->header super method in Mail::Bulkmail. The difference 
-is internal. Here, if you set something via ->header, it is stored as a default header in dynamic_header_data,
-i.e.,
-
- $bulk->header("Foo", "Baz");
- 
- is equivalent to:
- 
- $bulk->dynamic_header_data(
- 	{
- 		"Foo" => {
- 			"_default" => "Baz"
- 		}
- 	}
- );
-
-Naturally, this is just for example. This dynamic_header_data example above would end up wiping out the rest of the
-dynamic_header_data hash, whereas the ->header example would not.
-
-Anyway, don't worry about the differences, since you really shouldn't need to care about it. But it's noted here
-just in case.
-
-This method is known to be able to return:
-
- MBD015 - cannot set CC or BCC header
- MBD016 - invalid header
-
-=cut
-
-sub header {
-	
-	my $self	= shift;
-	my $header	= shift || return $self->_headers;
-	
-	if ($header =~ /^(?:From|To|Sender|Reply-To|Subject|Precedence)$/){
-		$header =~ s/\W//g;
-		return $self->$header(@_);
-	}
-	elsif ($header =~ /^b?cc/i){
-		return $self->error("Cannot set CC or BCC...that's just common sense!", "MBD015");
-	}
-	else {
-		if ($header =~ /^[\x21-\x39\x3B-\x7E]+$/){
-			$self->dynamic_header_data({}) unless defined $self->dynamic_header_data();
-			if (@_){
-				my $val = shift;
-				if (defined $val) {
-					$self->dynamic_header_data->{$header}->{"_default"} = $val;
-					return $val;
-				}
-				else {
-					delete $self->dynamic_header_data->{$header};
-					return 0;
-				};
-			};
-		}
-		else {
-			return $self->error("Cannot set header '$header' : invalid. Headers cannot contain non-printables, spaces, or colons", "MBD016");
-		};
-	};
-
-};
-
-=pod
-
 =back
 
 =head1 METHODS
@@ -961,7 +887,7 @@ sub buildHeaders {
 			
 			next if ! defined $val || $val !~ /\S/;
 			
-			$set->{$key}++;
+			next if $set->{$key}++;
 			
 			$headers .= $key . ":" . $val . "\015\012";
 		};
@@ -981,7 +907,7 @@ sub buildHeaders {
 	$headers .= "Subject:" . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
 
 	unless ($set->{"To"}){
-		if (my $to = $self->To){
+		if (my $to = $self->extractEmail($data)){
 			$headers .= "To:$to\015\012";
 		}
 		else {
@@ -994,16 +920,33 @@ sub buildHeaders {
 	
 	#we're always going to specify at least a list precedence
 	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};
-		
-	unless ($set->{"Content-type"}){
-		if ($self->HTML){
-			$headers .= "Content-type:text/html\015\012";
+
+
+	unless ($self->{"Content-type"}){
+		if ($self->_headers->{"Content-type"}){
+			$headers .= "Content-type:" . $self->_headers->{"Content-type"} . "\015\012";
 		}
 		else {
-			$headers .= "Content-type:text/plain\015\012";
+			if ($self->HTML){
+				$headers .= "Content-type:text/html\015\012";
+			}
+			else {
+				$headers .= "Content-type:text/plain\015\012";
+			};
 		};
 	};
 	#done with our default headers
+
+	foreach my $key (keys %{$self->_headers}) {
+		next if $key eq 'Content-type';
+		my $val = $self->_headers->{$key};
+		
+		next if ! defined $val || $val !~ /\S/;
+		
+		next if $set->{$key}++;
+		
+		$headers .= $key . ":" . $val . "\015\012";
+	};
 	
 	#do our global value merge
 	if ($self->global_merge){

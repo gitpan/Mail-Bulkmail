@@ -1713,15 +1713,13 @@ sub buildHeaders {
 		};
 	};
 	
-	foreach my $header (keys %{$headers_hash}) {
-		next if $header eq 'Content-type';
-		my $h = $headers_hash->{$header};
+	foreach my $key (keys %{$headers_hash}) {
+		next if $key eq 'Content-type';
+		my $val = $headers_hash->{$key};
 		
-		next if ! defined $h || $h !~ /\S/;
+		next if ! defined $val || $val !~ /\S/;
 		
-		$headers .= $header . ":" . $h . "\015\012";
-		
-
+		$headers .= $key . ":" . $val . "\015\012";
 	};
 	
 	# I'm taking credit for the mailing, dammit!

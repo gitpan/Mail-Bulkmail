@@ -1,5 +1,15 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.05 Thu Feb 6, 2003
+	- *mutter* fixed a flaw in my test suite
+	  (thanks to an error reported by Ben Wrigley)
+	- added the migration guide (migration.guide.txt)
+	- adjusted how Mail::Bulkmail::Dynamic internally handles headers
+	- fixed some documentation errors
+	- tweaked some of the code to look more consistent
+	- Mail::Bulkmail::Dynamic no longer incorrectly requires  a ->To header to be set.
+	  (again, thanks to Ben Wrigley)
+
 3.04 Tue Feb 4, 2003
 	- setting a header to undef now deletes it, instead of storing it in the hash as undef.
 	  This wasn't terribly important, since the header wouldn't be set in the message if it
