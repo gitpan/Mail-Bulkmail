@@ -1,12 +1,16 @@
 package Mail::Bulkmail;
 
-$VERSION = "2.01";
+#Copyright (c) 1999, 2000 James A Thomason III (thomasoniii@yahoo.com). All rights reserved.
+#This program is free software; you can redistribute it and/or
+#modify it under the same terms as Perl itself.
+
+$VERSION = "2.03";
 
 use Socket;
 use 5.004;
 
-#use strict;
-#$^W = 1;
+use strict;
+$^W = 1;
 
 {
 
@@ -14,7 +18,7 @@ use 5.004;
 	my $def_From		= 'Postmaster';
 	my $def_To			= 'postmaster@your.smtp.com';
 	my $def_Smtp		= 'your.smtp.com';		#<--Set this variable.  Important!
-	my $def_Domain		= "playboy.com";
+	my $def_Domain		= "smtp.com";
 	my $def_Port 		= '25';
 	my $def_Tries		= '5';
 	my $def_Subject		= "(no subject)";
@@ -39,14 +43,16 @@ use 5.004;
 		my $counter;
 		
 		sub add_attr {
-			my $self = shift or undef;
-			return $counter++;
+				my $self = shift or undef;
+				if (@_){
+						my $low = $counter;
+						$counter += shift;
+						return ($low .. $counter);
+				}
+				else {return $counter++};
 		};
 		
 	};
-
-	#initialize the array
-	my $counter 		= 0;
 	
 	my $From 			= Mail::Bulkmail->add_attr();
 	my $To				= Mail::Bulkmail->add_attr();
@@ -80,25 +86,20 @@ use 5.004;
 	
 	my $connected 		= Mail::Bulkmail->add_attr();
 	
-	#my $Tz 			= Mail::Bulkmail->add_attr();
-	#my $Date 			= Mail::Bulkmail->add_attr();
-	
 	my $Trusting	 	= Mail::Bulkmail->add_attr();
 	my $error 			= Mail::Bulkmail->add_attr();
 	my $duplicates 		= Mail::Bulkmail->add_attr();
 	my $headers 		= Mail::Bulkmail->add_attr();
 	my $BMD 			= Mail::Bulkmail->add_attr();		#filemap delimiter
 	my $DMD				= Mail::Bulkmail->add_attr();		#dynamic message delimiter
-	my $DMDE			= Mail::Bulkmail->add_attr();
-	my $DHD				= Mail::Bulkmail->add_attr();
-	my $DHDE			= Mail::Bulkmail->add_attr();
+	my $DMDE			= Mail::Bulkmail->add_attr();		#dynamic message assignment delimiter
+	my $DHD				= Mail::Bulkmail->add_attr();		#dynamic header delimiter
+	my $DHDE			= Mail::Bulkmail->add_attr();		#dynamic header assignment delimiter
 	my $HFM 			= Mail::Bulkmail->add_attr();		#headers from message
 	my $lineterm		= Mail::Bulkmail->add_attr();		#line terminator
 	
 	
 	my $use_envelope	= Mail::Bulkmail->add_attr();
-	
-	$counter 			= undef;
 	
 	#email accessors
 	sub email_accessor {
@@ -135,7 +136,7 @@ use 5.004;
 	sub header {
 	
 		my $self = shift or undef;
-		my $header = shift or undef;
+		my $header = shift or return $self->[$headers];
 		
 		if ($header =~ /^(?:From|Subject|Precedence|HTML|To)$/){
 			return $self->$header(@_);
@@ -233,7 +234,6 @@ use 5.004;
 		my $self = shift or undef;
 		my $prop = shift or undef;
 		my $file = @_ > 1 ? [@_] : shift or undef;
-		
 		if ($file) {
 			unless (ref $file){
 				my $handle = $self->gen_handle();
@@ -251,8 +251,8 @@ use 5.004;
 						$value = $self->getnextLine($file) || return $self->error("Cannot get value for hash: odd length");
 					}
 					else {
-						$key = lc $key;
 						$value = $self->lc_domain($key);
+						$key = lc $key;
 					};
 					$hash{$key} = $value;
 				};
@@ -277,14 +277,15 @@ use 5.004;
 	
 	sub setDuplicate {
 		my $self = shift or undef;
+		my $email = shift or return $self->error("Cannot set duplicate: No email address");
 		
 		return 1 if $self->allow_duplicates();
 		
 		if ($self->safe_banned){
-			$self->duplicates->{lc shift or undef} = 1;
+			$self->duplicates->{lc $email} = 1;
 		}
 		else {
-			$self->duplicates->{$self->lc_domain(shift or undef)} = 1;
+			$self->duplicates->{$self->lc_domain($email)} = 1;
 		};
 		
 		return 1;
@@ -292,25 +293,26 @@ use 5.004;
 	
 	sub isDuplicate {
 		my $self = shift or undef;
+		my $email = shift or return $self->error("Cannot determine duplicate: No email address");
 		return 0 if $self->allow_duplicates();
 		
 		if ($self->safe_banned){
-			return $self->duplicates->{lc shift or undef};
+			return $self->duplicates->{lc $email};
 		}
 		else {
-			return $self->duplicates->{$self->lc_domain(shift or undef)};
+			return $self->duplicates->{$self->lc_domain($email)};
 		};
 		
 	};
 	
 	sub isBanned {
 		my $self = shift or undef;
-		my $email = shift or undef;
+		my $email = shift or return $self->error("Cannot determine banned-ness: No email address");
 		if ($self->safe_banned){
 			return 1 if defined $self->banned->{lc $email};
 		}
 		else {
-			return 1 if $self->banned->{lc $email} eq $email;
+			return 1 if $self->banned->{lc $email} eq $self->lc_domain($email);
 		};
 		
 		return 0;
@@ -320,7 +322,7 @@ use 5.004;
 	#boring ole' normal accessors
 	sub accessor {
 		my $self = shift or undef;
-		my $prop = shift or undef;
+		my $prop = shift or return $self->error("Accessor called incorrectly: Bad programmer!");
 		$self->[$prop] = shift or undef if @_;
 		return $self->[$prop];
 	};
@@ -355,44 +357,69 @@ use 5.004;
 	
 	#/boring ole' normal accessors
 
-	sub error {
-		my $self = shift or undef;
+	{	#wrap up class and object error handling
+		#Bulkmail 2.03 objects and higher store their error strings first.
+		#But you don't care, since you've never _ever_ directly accessed the
+		#underlying object, right?
 		
-		if (@_){
-			$self->[$error] = shift or undef;
-			#print "\nERROR: ", $self->[$error], "\n";
-			
-			$self->log_it($self->[$error], $self->ERRFILE()) if $self->ERRFILE;
-			
-			#Did we call error with any additional arguments?  If so, we want to log something else.
-			#So let's log it:
-			if (@_){
-				my $what = shift or undef;
-				my $where = shift or undef;
+		BEGIN {
+			my $error = Mail::Bulkmail->add_attr();
+		};
+		
+		my $global_error = undef;
+		sub error {
+				my $self = shift or undef;
 				
-				$self->log_it($what, $where);
-			};
+				if (ref $self){
+						if (@_){
+								$self->[$error] = shift or undef;
+								
+								$self->log_it($self->[$error], $self->ERRFILE()) if $self->ERRFILE;
+							   	
+							   	if (@_){
+							my $what = shift or undef;
+							my $where = shift or undef;
+
+							$self->log_it($what, $where);
+						}; 
+						
+								return undef;
+						}
+						else {return $self->[$error]};
+				}
+				else {
+						if (@_){
+								$global_error = shift;
+								return undef;
+						}
+						else {return $global_error};
+				};
+		};	  #end error
 			
-			return undef;
-		}
-		else {return $self->[$error]};
-	};
+	};	  #end error wrap up
 
 	sub log_it {
 		
 		my $self = shift or undef;
 		my $value = shift or undef;
 		my $handle = shift or undef;
-		if ($handle){
+		
+		if (ref $handle eq 'ARRAY'){
+			push @$handle, $value;
+		}
+		elsif (ref $handle eq 'CODE'){
+			&$handle($value);
+		}
+		elsif (ref $handle eq 'GLOB'){
 			select((select($handle), $| = 1)[0]); 		#Make sure the file is piping hot!
 			
 			local $\ = undef;
 			
 			#get rid of those sendmail-ified carriage returns
 			$value =~ s/\015\012$//g;
-			
 			print $handle $value, $self->lineterm();
-		};
+		}
+		else {return $self->error("Logging error: Nothing to log to")};
 		
 		return 1;
 		
@@ -422,8 +449,8 @@ use 5.004;
 			"Precedence"				=> $def_Precedence,
 			"Trusting"					=> $def_Trusting,
 			"duplicates" 				=> {},
-			"merge"					=> {},
-			"dynamic"				=> {},
+			"merge"						=> {},
+			"dynamic"					=> {},
 			"banned" 					=> {},
 			"lineterm"					=> $def_lineterm,
 			"BMD"						=> $def_BMD,
@@ -438,8 +465,7 @@ use 5.004;
 			"allow_duplicates"			=> $def_allow_duplicates,
 			"sort_list"					=> 0,
 			@_
-		) or print $self->error("Cannot create object, initialization error: " . $self->error());
-	#print "SELF: $self  (", $self->error(), ")\n";
+		) or return Mail::Bulkmail->error("Cannot create object, initialization error: " . $self->error());
 		return $self;
 		
 	};
@@ -453,20 +479,20 @@ use 5.004;
 		$self->ERRFILE		($init{"ERRFILE"}) 	if $init{"ERRFILE"};	#Be sure we can log errors ASAP
 		$self->Trusting		($init{"Trusting"});
 		
-		$self->From			($init{"From"});
-		$self->To			($init{"To"});
-		$self->Subject		($init{"Subject"});
+		$self->From			($init{"From"}) 	or return undef;
+		$self->To			($init{"To"}) 		or return undef;
+		$self->Subject		($init{"Subject"}) 	or return undef;
 		$self->Message		($init{"Message"})	if $init{"Message"};
-		$self->merge		($init{"merge"})	if $init{"merge"};
+		$self->merge		($init{"merge"});
 		
-		$self->dynamic			($init{"dynamic"})	if $init{"dynamic"};
-		$self->dynamic_headers	($init{"dynamic_headers"})	if $init{"dynamic_headers"};
+		$self->dynamic			($init{"dynamic"});
+		$self->dynamic_headers	($init{"dynamic_headers"});
 			
 		#smtp related
-		$self->Smtp			($init{"Smtp"});
-		$self->Port			($init{"Port"});
-		$self->Tries		($init{"Tries"});
-		$self->Precedence	($init{"Precedence"});
+		$self->Smtp			($init{"Smtp"}) 		or return undef;
+		$self->Port			($init{"Port"}) 		or return undef;
+		$self->Tries		($init{"Tries"}) 		or return undef;
+		$self->Precedence	($init{"Precedence"}) 	or return undef;
 		$self->Domain		($init{"Domain"} or $init{"From"});
 		
 		$self->BMD($init{"BMD"});
@@ -480,29 +506,34 @@ use 5.004;
 		$self->LIST			($init{"LIST"})	 	if $init{"LIST"};
 		$self->BAD			($init{"BAD"}) 		if $init{"BAD"};
 		$self->GOOD			($init{"GOOD"}) 	if $init{"GOOD"};
-		$self->banned		($init{"banned"})	if $init{"banned"};
+		#$self->banned		($init{"banned"})	if $init{"banned"};
 		
 		$self->lineterm		($init{"lineterm"});
 		$self->safe_banned	($init{"safe_banned"});
 		$self->allow_duplicates	($init{"allow_duplicates"});
 		
-		#initialize duplicate value checking
-		$self->duplicates	($init{"duplicates"});
-	
 		$self->use_envelope	($init{"use_envelope"});
+	
+		#initialize our duplicates hash.
+		$self->duplicates({});
+		
+		#initialize our banned hash.
+		$self->banned($init{"banned"} || {});
 	
 		#Initialize the additional headers hash.
 		$self->[$headers] = {};
 		
 		#and remove those defaults
-		delete @init{"From", "Subject", "Message", "merge", "Smtp", "Port", "Tries", "Precedence", "Domain",
-			"BMD", "DMD", "HFM", "LIST", "BAD", "GOOD", "ERRFILE",
-			"banned", "duplicates"};
+		delete @init{qw(ERRFILE Trusting From To Subject Message merge dynamic 
+			dynamic_headers Smtp Port Tries Precedence Domain BMD 
+			DMD DMDE DHD DHDE HFM LIST BAD GOOD banned lineterm 
+			safe_banned allow_duplicates use_envelope duplicates banned sort_list)
+		};
 		
 		#is there anything left?  We're gonna assume that they're headers for simplicity's sake.
 		#These things will get bounced down to headset, in the accessor method section.
 		my $BULK_header = undef;  
-		foreach $BULK_header (keys %init){
+		foreach my $BULK_header (keys %init){
 			$self->header($BULK_header,$init{$BULK_header});
 		};	
 	
@@ -755,9 +786,6 @@ sub build_merge_hash {
 		return $self->error("BULK_MAILMERGE must be same type as line (" . ref($keys) .  " is not " . ref($values) .  ")") unless ref $keys eq ref $values;
 		
 		unless (ref $values eq "HASH" || ref $keys eq "HASH"){
-			#@$merge->{@$keys} = @$merge->{@$values};
-			#print "KEYS: @$keys\n";
-			#print "VALUES: @$values\n";
 			@{%$merge}{@$keys} = @$values;
 		}
 		else {@$merge->{keys %$values} = @$merge->{keys %$values}};
@@ -769,33 +797,28 @@ sub build_merge_hash {
 				$merge->{"DYNAMIC_MESSAGE"} = $values;
 			}
 			else {
-				#my %temp_hash = %{$self->dynamic};
 				my %temp_hash = ();
 				my $delim = $self->DMDE;
 				foreach my $dynamic (@$values){
 					my ($key, $value) = split(/$delim/, $dynamic);
 					$temp_hash{$key} = $self->dynamic->{$key}->{$value} or return $self->error("Dynamic key ($key, $value) not defined");
 				};
-				#@temp_hash{ref $keys eq "HASH" ? keys %$keys : $keys} = $values;
 				$merge->{"DYNAMIC_MESSAGE"} = \%temp_hash;
 			};
 		};
 		
 		if (defined $merge->{"DYNAMIC_HEADERS"}){
-			#print "DYNAMIC HEADERS ARE DEFINED!\n";exit;
 			my $values = $self->build_merge_line($merge->{"DYNAMIC_HEADERS"}, $self->DHD) or return undef;
 			if (ref $values eq "HASH"){
 				$merge->{"DYNAMIC_HEADERS"} = $values;
 			}
 			else {
-				#my %temp_hash = %{$self->dynamic};
 				my %temp_hash = ();
 				my $delim = $self->DHDE;
 				foreach my $dynamic (@$values){
 					my ($key, $value) = split(/$delim/, $dynamic);
 					$temp_hash{$key} = $self->dynamic_headers->{$key}->{$value} or return $self->error("Dynamic header key ($key, $value) not defined");
 				};
-				#@temp_hash{ref $keys eq "HASH" ? keys %$keys : $keys} = $values;
 				$merge->{"DYNAMIC_HEADERS"} = \%temp_hash;
 			};
 		};	
@@ -861,6 +884,7 @@ sub bulkmail {
 		
 		unless ($self->valid_email($email)){
 			$self->error("Invalid address: $email");
+			$self->log_it($merge->{"BULK_EMAIL"}, $self->BAD);
 			next;
 		};
 		
@@ -947,34 +971,47 @@ sub buildMessage {
 	#print "BUILDING MESSAGE\n";
 	return \$message if $self->cached_message;
 	#print "NON CACHED MESSAGE\n";
-	my $headers = {};
+	
+	#not sure if I want to alter the pre-set headers...
+	my %he = %{$self->header};
+	my $headers = \%he;
+	
 	$message =~ s/(?:\r\n?|\r?\n)/\015\012/g;
 	
 	if ($self->HFM){
 		my $header_string = undef;
-		($header_string, $message) = split(/\015\012/, $message);
+		($header_string, $message) = split(/\015\012\015\012/, $message);
 
-		$headers = {split(/\s*:\s*|\015\012/, $header_string)};
+		my $last_header = undef;
+		foreach (split/\015\012/, $header_string){
+			if (/:/){
+				my ($header, $value) = split(/\s*:\s*/);
+				$headers->{$header} = $value;
+				$last_header = $header;
+			}
+			elsif (/^\s+/){
+				$headers->{$last_header} .= "\015\012$_";
+			}
+			else {
+				return $self->error("Invalid Headers from Message: line ($_)\n\n-->($header_string)");
+			};
+		};
+				
+		#$header_string =~ s/\015\012\s+([^:]+?)\015\012/$1\015\012/g;
+		#$headers = {split(/\s*:\s*|\015\012/, $header_string)};
 	};
 	
-	$headers->{"From"} 			= $self->From;
-	$headers->{"To"}   			= $self->use_envelope ? $self->To : $merge->{"BULK_EMAIL"};
-	$headers->{"Subject"} 		= $self->Subject;
-	$headers->{"Precedence"} 	= $self->Precedence;
-	#print "TRYING TO BUILD ME A MERGE: ($merge)\n";
-	#print map {"MERGE KEY: $_, ". $merge->{$_}. "\n"} keys %$merge;
-	#print "DYNAMIC KEYS  : ", keys %{$merge->{"DYNAMIC_HEADERS"}}, "\n";
-	#print "DYNAMIC VALUES: ", values %{$merge->{"DYNAMIC_HEADERS"}}, "\n";
+	$headers->{"From"} 			||= $self->From;
+	$headers->{"To"}   			||= $self->use_envelope ? $self->To : $merge->{"BULK_EMAIL"};
+	$headers->{"Subject"} 		||= $self->Subject;
+	$headers->{"Precedence"} 	||= $self->Precedence;
+
 	@$headers{keys %{$merge->{"DYNAMIC_HEADERS"}}} = values %{$merge->{"DYNAMIC_HEADERS"}};
-	#print map {"HEADER KEY: ($_), HEADER VALUE: (" . $headers->{$_} . ")\n"} keys %$headers;
-	#print map {"DYNAMIC HEADER KEY: ($_), DYNAMIC HEADER VALUE: (" . $headers->{$_} . ")\n"} keys %{$merge->{"DYNAMIC_HEADERS"}};
-#print "TO: (", $self->To, ")  (", $headers->{"To"}, ")\n";
-#print "EXISTS\n" if exists $headers->{"To"};
-#print "DEFINE\n" if defined $headers->{"To"};
+
 	return $self->error("Cannot send invalid 'from' address:  (" . $headers->{"From"} . ")") 	unless $self->valid_email($headers->{"From"});
 	return $self->error("Cannot send invalid 'to' address:  (" 	. $headers->{"To"} . ")") 			if $self->use_envelope && ! $self->valid_email($headers->{"To"});
 	return $self->error("Invalid precedence:  (" 				. $headers->{"Precedence"} . ")") 	unless $self->valid_precedence($headers->{"Precedence"});
-#print "TRYING TO BUILD HEADERS\n";
+
 	#build the headers
 	my $message_header = "Date: " . $self->Date . "\015\012";
 	foreach my $header (qw(From Subject To Precedence)){
@@ -986,12 +1023,15 @@ sub buildMessage {
 		delete $headers->{$header} if defined $headers->{$header};
 	};
 	
-	foreach my $header (keys %{$headers}){
+	foreach my $header (sort keys %{$headers}){
 		#print "HEADER: $header\n";
 		$message_header .= "$header: " . $self->scalar_or_code($headers->{$header}) . "\015\012";
 	};
 	
 	delete $merge->{"DYNAMIC_HEADERS"} if defined $merge->{"DYNAMIC_HEADERS"};
+	
+	#set the content-type to html, if appropriate.
+	$message_header .= "Content-type: text/html\015\012" if $self->HTML;
 	
 	$message_header .= "X-Bulkmail: $Mail::Bulkmail::VERSION\015\012";
 	
@@ -1156,13 +1196,13 @@ Mail::Bulkmail - Platform independent mailing list module
 
 =head1 AUTHOR
 
-Jim Thomason jim3@psynet.net
+Jim Thomason thomasoniii@yahoo.com
 
 =head1 SYNOPSIS
 
  $bulk = Mail::Bulkmail->new(
- 	"LIST"	=> "/home/jim3",
-	From	=> 'jim3@psynet.net',
+ 	"LIST"	=> "/home/jim3.list",
+	From	=> 'thomasoniii@yahoo.com',
 	Subject	=> 'This is a test message!',
 	Message	=> "Here is the text of my message!"
  );
@@ -1217,7 +1257,7 @@ $bulk = Mail::Bulkmail->new();
 You can also initialize values at creation time, such as:
 
  $bulk = Mail::Bulkmail->new(
-			From	=>	'jim3@psynet.net',
+			From	=>	'thomasoniii@yahoo.com',
 			Smtp	=>	'some.smtp.com'
 		);
 
@@ -1268,7 +1308,7 @@ Here are all of the accessors that come built in to your Mail::Bulkmail objects.
 =item From
 
 The e-mail address this list is coming from.  This can be either a simple e-mail address 
-(jim3@psynet.net), or a name + e-mail address ("Jim Thomason"<jim3@psynet.net>).  This is checked
+(thomasoniii@yahoo.com), or a name + e-mail address ("Jim Thomason"<thomasoniii@yahoo.com>).  This is checked
 to make sure it's a valid email address unless you have Trusting turned on (see below).
 
 I<v1.x equivalent>:  From 
@@ -1366,7 +1406,7 @@ sending a hell of a lot less data across your connection, your SMTP server has l
 ends up working out wonderfully.
 
 There are two catches.  First of all, with envelope sending turned off, the recipient will have their own email
-address in the "To" field (To: jim3@psynet.net, fer instance).  With the envelope on, the recipient will only
+address in the "To" field (To: thomasoniii@yahoo.com, fer instance).  With the envelope on, the recipient will only
 receive a generic email address ("To: list@myserver.com", fer instance)  Most people don't care since that's
 how most email lists work, but you should be aware of it.
 
@@ -1404,11 +1444,11 @@ set with lineterm().
 
 B<A>lternatively, you can pass a ref to an array for your list.
 
- my @list = ('jim3@psynet.net', 'someguy@somewhere.com', 'invalid_@address');
+ my @list = ('thomasoniii@yahoo.com', 'someguy@somewhere.com', 'invalid_@address');
  $bulk->(\@list);
  
  #or, with an anonymous array
- $bulk->(['jim3@psynet.net', 'someguy@somewhere.com', 'invalid_@address']);
+ $bulk->(['thomasoniii@yahoo.com', 'someguy@somewhere.com', 'invalid_@address']);
 
 You probably don't want to use arrays for your lists unless you're doing small tests.  Otherwise, you'll
 read your whole list into memory in advance, which is probably not what you wanted to do.
@@ -1418,7 +1458,7 @@ Arrays as list will return the values in order from the front to the end of the 
 B<P>robably the most powerful method to build your list is to pass a ref to a function.
 
  {
-  my @list = ('jim3@psynet.net', 'someguy@somewhere.com', 'invalid_@address');
+  my @list = ('thomasoniii@yahoo.com', 'someguy@somewhere.com', 'invalid_@address');
   
   sub some_function {return shift @list};
  };
@@ -1463,7 +1503,7 @@ If you pass a ref to an array, any items will be push-ed onto the array as they'
 If you pass a ref to a function, then the function will be called with a single argument of whatever it is
 that was going to be logged.
 
-For example, if ".jim3@ psynet.net" is encountered (a bad address!), any of the following would end up happening,
+For example, if ".thomasoniii@yahoo.com" is encountered (a bad address!), any of the following would end up happening,
 depending upon what "BAD" is:
 
  print BAD ".jim3@ psynet.net", $bulk->lineterm();	#BAD is a file
@@ -1497,10 +1537,10 @@ from your mailing list and never email me again!" will go in this category.
 A banned list can be built the same way as GOOD, BAD, LIST, etc., with an array, a filehandle, a function, or
 a string containing a filename.  Banned entries are one per line.
 
- jim3@psynet.net
+ thomasoniii@yahoo.com
  yahoo.com
 
-would ban email from jim3@psynet.net, and anyone within the yahoo.com domain.  Please note that domains will only
+would ban email from thomasoniii@yahoo.com, and anyone within the yahoo.com domain.  Please note that domains will only
 be banned upwards, not downwards.  So with an entry like this:
 
  yahoo.com
@@ -1522,9 +1562,9 @@ to store everything in memory.
 Why the funky hash format?  One of the screwball, IMHO, things about the email specification is that the domain
 part of an email address is case insensitive, but the local part is case sensitive.  This means that 
 
- JIM3@psynet.net
- jim3@psynet.net
- Jim3@psynet.net
+ thomasoniii@yahoo.com
+ thomasoniii@yahoo.com
+ thomasoniii@yahoo.com
  
 all could be different addresses.  So, in theory, you could have those three addresses in your mailing list and
 they're three different people!  Consequently, we need to keep track of exactly how the email address was typed
@@ -1534,8 +1574,8 @@ Yeah, I know it's arguably being silly to do this, since I've never (I<ever>) en
 allowed multiple differently-cased email addresses like this, but dammit I want to have the option in here
 to deal with it!  :-)
 
-'course, people could very well subscribe to your list using "JIM3@psynet.net" and then try to unsubscribe
-using "jim3@psynet.net" and mess things up royally.  That's why we have the safe_banned method.
+'course, people could very well subscribe to your list using "thomasoniii@yahoo.com" and then try to unsubscribe
+using "thomasoniii@yahoo.com" and mess things up royally.  That's why we have the safe_banned method.
 I<See safe_banned, below>
 
 I<v1.x equivalent>:  BANNED
@@ -1543,7 +1583,7 @@ I<v1.x equivalent>:  BANNED
 =item safe_banned
 
 safe_banned is set to true by default.  safe_banned makes your matches on addresses case insensitive.
-So that a request to ban "JIM3@PSYNET.NET" will also ban "jim3@psynet.net", and "JiM3@PsyNet.net".  You
+So that a request to ban "thomasoniii@yahoo.com" will also ban "thomasoniii@yahoo.com", and "thomasoniii@yahoo.com".  You
 almost definitely want to leave this on, for safety's sake, but you can turn it off if you'd like.
 
 I<See banned above>
@@ -1585,7 +1625,8 @@ of the form "Name:value", one per line with an empty line seperating the headers
 It is B<much> better to explicitly set the headers using the header method because it's a tougher 
 to make mistakes using header.  Nonetheless, setting HFM to any true value will cause the module to
 look in the message for headers.  Any valid headers extracted from the message will override existing 
-headers.  Headers extracted from the message will be removed from the message body.
+headers.  Dynamically generated headers will override extracted headers, however.  
+Headers extracted from the message will be removed from the message body.
 
 But be perfectly sure you know what you're doing.
 
@@ -1599,9 +1640,12 @@ But be perfectly sure you know what you're doing.
 		
 		Jim";
 
-Because HFM is set to true, the first four lines are extracted from the message and sent as headers.
+Before v2.03, since HFM is set to true, the first four lines are extracted from the message and sent as headers.
 The extent of the message that goes through is "Jim" (everything after the first blank line which separates
 headers from message body).
+
+After v2.03, this will generate an error since HFM now makes sure that the headers are formed properly.  It
+still doesn't verify its headers, though, so you still need to be careful.  Maybe in the next release...
 
 HFM is off by default.
 
@@ -1676,19 +1720,19 @@ You're perfectly welcome to access any additional data that you'd like.  We're g
 or setting a header other than the standard ones that are provided.  You even get a special method to access them:
 header().  Using it is a piece of cake:
 
-$bulk->header('Reply-to', 'jim3@psynet.net');
+$bulk->header('Reply-to', 'thomasoniii@yahoo.com');
 
-Will set a "Reply-to" header to the value of "jim3@psynet.net".  Want to access it?
+Will set a "Reply-to" header to the value of "thomasoniii@yahoo.com".  Want to access it?
 
 $bulk->header('Reply-to');
 
 What's that you ask?  Why don't we set *all* headers this way?  Well, truth be told you can set them using header.
 
-$bulk->header('From', 'jim3@psynet.net');
+$bulk->header('From', 'thomasoniii@yahoo.com');
 
 Is the same as:
 
-$bulk->From('jim3@psynet.net');
+$bulk->From('thomasoniii@yahoo.com');
 
 Note that you can only set other _headers_ this way.  The headers that have their own methods are From, Subject, and
 Precedence.  Calling header on something else, though (like "Smtp") will set a header with that value, which is probably
@@ -1704,13 +1748,15 @@ OR--You can just set your headers at object construction.  Realistically, you're
 at construction time, so this is not a problem.  Just remember to quote those things with non-word characters in them.
 
  $bulk->Mail::Bulkmail->new(
- 		From		=> 	'jim3@psynet.net',
+ 		From		=> 	'thomasoniii@yahoo.com',
  		Subject		=>	'Some mass message',
- 		'Reply-to'	=>	'jimt@playboy.com'
+ 		'Reply-to'	=>	'thomasoniii@yahoo.com'
  	);
 
 If you don't quote headers with non-word characters, all sorts of nasty errors may pop up.  And they're tough to track down.
 So don't do it.  You've been warned.
+
+As of v2.03, ->header() without a specific header name will return a hashref containing all additional headers that have been set.
 
 I<Also see dynamic headers below>
 
@@ -1726,7 +1772,7 @@ to keep you from making mistakes.  The only one that should really ever concern 
 This checks the return e-mail address against RFC 822 standards.
 The validation routine is not perfect as it's really really hard to be perfect, but
 it should accept any valid non-group non-commented e-mail address.
-There is one bug in the routine that will allow "Jim<jim3@psynet.net" to pass as valid,
+There is one bug in the routine that will allow "Jim<thomasoniii@yahoo.com" to pass as valid,
 but it's a nuisance to fix so I'm not going to.  :-)
 
 I<v1.x equivalent>:  From
@@ -1736,7 +1782,7 @@ I<v1.x equivalent>:  From
 This checks the to e-mail address against RFC 822 standards.
 The validation routine is not perfect as it's really really hard to be perfect, but
 it should accept any valid non-group non-commented e-mail address.
-There is one bug in the routine that will allow "Jim<jim3@psynet.net" to pass as valid,
+There is one bug in the routine that will allow "Jim<thomasoniii@yahoo.com" to pass as valid,
 but it's a nuisance to fix so I'm not going to.  :-)
 
 The ->To address is used when you are sending to a list using the envelope.
@@ -1819,7 +1865,20 @@ error is where the last error message is kept.  Can be used as follows:
 
 $bulk->connect || die $bulk->error;
 
-All error messages will be logged if you specifed an ERRFILE file.
+All B<object> error messages will be logged if you specifed an ERRFILE file.
+
+error is also usable as a class method:
+
+Mail::Bulkmail->error();
+
+will return whatever the last global class-wide error is, such as an object construction failure.
+In fact, currently that's the only error it catches.  But you can now easily do:
+
+ my $bulk = Mail::Bulkmail->new(
+ 	"From" => 'thomasoniiI@yaho'	#invalid address!
+ ) or die Mail::Bulkmail->error();
+ 
+to find out why construction failed.
 
 =back
 
@@ -1848,10 +1907,10 @@ anonymous hashes or references to hashes.  For example:
 At constrution:
 
  	$bulk = Mail::Bulkmail->new(
- 				From	=>	jim3@psynet.net,
+ 				From	=>	thomasoniii@yahoo.com,
  				merge		=> {
  								'DATE' => 'today',
- 								'company' => 'Playboy Enterprises'
+ 								'company' => 'Thomason Industries'
  							}
  			);
 
@@ -1867,7 +1926,7 @@ the BULK_MAILMERGE key.  Local merges are declared with the same keyword (merge)
 As a call to mail:
 
  	$bulk->mail(
- 			'jim3@psynet.net',
+ 			'thomasoniii@yahoo.com',
  			{
  				'ID'   => '36373',
  				'NAME' => 'Jim Thomason',
@@ -1899,12 +1958,12 @@ without having to loop through the address list yourself and specify a new local
 BULK_MAILMERGE may only be set in a global map, its presence is ignored in local merges.
 
  If your list file is this:
-   jim3@psynet.net::36373::Jim Thomason
+   thomasoniii@yahoo.com::36373::Jim Thomason
    or
-   ["jim3@psynet.net", "36373", "Jim Thomason"]
+   ["thomasoniii@yahoo.com", "36373", "Jim Thomason"]
    or
    {
-   	"BULK_EMAIL" => "jim3@psynet.net,
+   	"BULK_EMAIL" => "thomasoniii@yahoo.com,
    	"ID"		 => "36373",
    	"NAME"		 => "Jim Thomason"
    }
@@ -1948,8 +2007,8 @@ For example:
 	$bulk->merge({'BULK_MAILMERGE'=>'BULK_EMAIL-+-ID-+-NAME'});
 	
 	(in your list file)
-	jim3@psynet.net-+-ID #1-+-Jim Thomason
-	jimt@playboy.com-+-ID #2-+-Jim Thomason
+	thomasoniii@yahoo.com-+-ID #1-+-Jim Thomason
+	thomasoniii@yahoo.com-+-ID #2-+-Jim Thomason
 	
 If you have set LIST to a function, or array, you can have each line return in an array or a hash.  Obviously,
 if LIST is a file, then every line has to be a delimited string as listed above.
@@ -2133,7 +2192,7 @@ ID, for instance.
  my $def_From		= 'Postmaster';
  my $def_To			= 'postmaster@your.smtp.com';
  my $def_Smtp		= 'your.smtp.com';		#<--Set this variable.  Important!
- my $def_Domain		= "playboy.com";
+ my $def_Domain		= "smtp.com";
  my $def_Port 		= '25';
  my $def_Tries		= '5';
  my $def_Subject		= "(no subject)";
@@ -2166,6 +2225,18 @@ Check the return type of your functions, if it's 0, check ->error to find out wh
 =head1 HISTORY
 
 =over 14
+
+=item 2.03 8/22/00
+
+Tweaked the constructor.
+
+Enhanced 'error'.  See 'error', above.
+
+Enhanced HFM.
+
+Various bug fixes.
+
+Enhanced the test suite.
 
 =item 2.01 8/16/00
 
@@ -2284,7 +2355,7 @@ implementation, it took up well over 100 lines (and was 400x slower).
  );
  
  $bulk->mail(
- 		'jim3@psynet.net',
+ 		'thomasoniii@yahoo.com',
  		{
  			'<DATE>'	=> $today,
  			'<ID>'		=> 36373,
@@ -2294,7 +2365,7 @@ implementation, it took up well over 100 lines (and was 400x slower).
  	);
 
 This will e-mail out a message identical to the one we bulkmailed up above, but it'll only go to
-jim3@psynet.net
+thomasoniii@yahoo.com
 
 =head2 HUGE example with dynamic messaging
 
@@ -2325,7 +2396,7 @@ jim3@psynet.net
 
  my %hash = ("this" => "That");
  my $bulk = Mail::Bulkmail->new(
-	"From" => "jimt\@playboy.com",
+	"From" => "thomasoniii\@yahoo.com",
 	"Subject" => "Test with envelope",
 	"Smtp"	  => "email.emailserv.com",
 	"LIST"	  => \&email_list,
@@ -2363,8 +2434,8 @@ jim3@psynet.net
 			"mike" => 'mike@wallace.com'
 		},
 		"To" => {
-			"admin" => "admin\@playboy.com",
-			"test" => "test\@playboy.com"
+			"admin" => "admin\@somewhere.com",
+			"test" => "test\@elsewhere.com"
 		},
 		"Marvelous" => {
 			"Max" => "Max is marvelous!",

@@ -8,21 +8,43 @@
 
 BEGIN { $| = 1; print "1..1\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use Mail::Bulkmail;
+use lib ("../", "../../");
+use Mail::Bulkmail 2.03;
 $loaded = 1;
-print "ok 1\n";
+print "module loaded, continuing...\n\n";
+
+print "What is your email address? ";
+chomp(my $email = <STDIN>);
+print "\nWhat is your name? ";
+chomp (my $name = <STDIN>);
+print "\nWhat is the address of your smtp server? ";
+chomp (my $smtp = <STDIN>);
 
 eval {
-	$bulk = Mail::Bulkmail->new(
-		From		=> 'jim3@psynet.net',
-		To		=> 'some_invalid,emailaddress',
-		Subject 	=> 'Fake message',
-		Tries		=> 1,
-		'X-thing'	=> 'Some header'
-	);
+ $bulk = Mail::Bulkmail->new(
+ 	"LIST"	=> ['invalid_address::Invalid Address', $email . "::" . $name],
+ 	"GOOD" => \&good,
+ 	"BAD" => \&bad,
+	From	=> $email,
+	Subject	=> "Mail::Bulkmail $Mail::Bulkmail::VERSION test",
+	merge => {"BULK_MAILMERGE" => "BULK_EMAIL::NAME"},
+	Message	=> "Hi there, NAME.  Mail::Bulkmail seems to work fine!",
+	Smtp => $smtp,
+	"X-test" => "Bulkmail test!"
+ ) or die Mail::Bulkmail->error();
+ $bulk->bulkmail;
 
-	print "I can create an object. I'm happy.\n";
 
+};
+
+sub good {
+	print "Mail successfully sent to (@_)\n";
+};
+
+sub bad {
+	print "Mail did not send to (@_)\n";
+	print "    (this is good...'invalid_address' is an internal test case)\n"
+		if join("", @_) =~ /invalid_address/;
 };
 
 print "...error: $@" if $@;
