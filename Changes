@@ -1,5 +1,16 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.09 Fri Apr 04, 2003
+	- Mail::Bulkmail::Dynamic wasn't properly doubling periods. Oops.
+	  (thanks to Matthew Williams for pointing this out)
+	- Gah. Mail::Bulkmail::DummyServer had some crap in it regarding how filehandles
+	  were created and passed. 5.8.0 would complain about it.
+	  (many thanks to Christ Faust for giving me info to help track this down)
+	- as per request, added a space after the : in the headers
+	- added a fileno test on the socket to prevent printing on a closed filehandle
+	- added a 'no warnings "portable"' to make 5.8 shut up
+	- added a few more examples to the docs
+
 3.08 Sat Mar 29, 2003
 	- Damn this makes me mad. Turns out I was doubling periods and *then* wrapping the message.
 	  In some unlikely circumstances, that could cause a lone period on a line in the middle of
@@ -9,7 +20,7 @@ Revision history for Perl module Mail::Bulkmail.
 3.07 Fri Mar 28, 2003
 	- Fixed a stupid little bug that should not have slipped by me.
 	  (thanks to Guy Matz for pointing this out!)
-	- broke the versio numbers back out into the individual modules, so CPAN wouldn't bitch
+	- broke the version numbers back out into the individual modules, so CPAN wouldn't bitch
 
 3.06 Tue Mar 25, 2003
 	- No longer even attempts to connect to a server if you haven't specified the Tries parameter

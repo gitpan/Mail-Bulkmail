@@ -36,9 +36,10 @@ Go to town. Use it under the artistic license for Mail::Bulkmail use, distribute
 
 =cut
 
-$VERSION = '3.08';
+$VERSION = '3.09';
 
 use Socket;
+no warnings 'portable';
 use 5.6.0;
 #use Data::Dumper ();
 

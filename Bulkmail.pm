@@ -119,10 +119,9 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.08';
+$VERSION = '3.09';
 
 use Socket;
-use 5.6.0;
 
 use strict;
 use warnings;
@@ -1179,7 +1178,7 @@ sub header {
 	my $self	= shift;
 	my $header	= shift || return $self->_headers;
 
-	if ($header =~ /^(?:From|To|Sender|Reply-To|Subject|Precedence)$/){
+	if ($header =~ /^(?:From|To|Sender|Reply-?To|Subject|Precedence)$/){
 		$header =~ s/\W//g;
 		return $self->$header(@_);
 	}
@@ -1800,47 +1799,47 @@ sub buildHeaders {
 
 		my $email = $self->extractEmail($data);
 
-		$headers =~ s/^To:##EMAIL##/To:$email/m;
+		$headers =~ s/^To: ##EMAIL##/To: $email/m;
 
 		return \$headers;
 	};
 
 	my $headers	= undef;
 
-	$headers .= "Date:" . $self->Date . "\015\012";
+	$headers .= "Date: " . $self->Date . "\015\012";
 
 	if (my $from = $self->From){
-		$headers .= "From:" . $from . "\015\012";
+		$headers .= "From: " . $from . "\015\012";
 	}
 	else {
 		return $self->error("Cannot bulkmail...no From address", "MB014");
 	};
 
-	$headers .= "Subject:" . $self->Subject . "\015\012" if defined $self->Subject && $self->Subject =~ /\S/;
+	$headers .= "Subject: " . $self->Subject . "\015\012" if defined $self->Subject && $self->Subject =~ /\S/;
 
 	#if we're using the envelope, then the To: header is the To attribute
 	if (my $to = $self->use_envelope ? $self->To : "##EMAIL##"){
-		$headers .= "To:$to\015\012";
+		$headers .= "To: $to\015\012";
 	}
 	else {
 		return $self->error("Cannot bulkmail...no To address", "MB015");
 	};
 
-	$headers .= "Sender:"		. ($self->Sender || $self->From)		. "\015\012";
-	$headers .= "Reply-To:"		. ($self->ReplyTo || $self->From)		. "\015\012";
+	$headers .= "Sender: "		. ($self->Sender || $self->From)		. "\015\012";
+	$headers .= "Reply-To: "	. ($self->ReplyTo || $self->From)		. "\015\012";
 
 	#we're always going to specify at least a list precedence
-	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012";
+	$headers .= "Precedence: "		. ($self->Precedence || 'list')			. "\015\012";
 
 	if ($headers_hash->{"Content-type"}){
-		$headers .= "Content-type:" . $headers_hash->{"Content-type"} . "\015\012";
+		$headers .= "Content-type: " . $headers_hash->{"Content-type"} . "\015\012";
 	}
 	else {
 		if ($self->HTML){
-			$headers .= "Content-type:text/html\015\012";
+			$headers .= "Content-type: text/html\015\012";
 		}
 		else {
-			$headers .= "Content-type:text/plain\015\012";
+			$headers .= "Content-type: text/plain\015\012";
 		};
 	};
 
@@ -1850,11 +1849,11 @@ sub buildHeaders {
 
 		next if ! defined $val || $val !~ /\S/;
 
-		$headers .= $key . ":" . $val . "\015\012";
+		$headers .= $key . ": " . $val . "\015\012";
 	};
 
 	# I'm taking credit for the mailing, dammit!
-	$headers .= "X-Bulkmail:" . $Mail::Bulkmail::VERSION . "\015\012";
+	$headers .= "X-Bulkmail: " . $Mail::Bulkmail::VERSION . "\015\012";
 
 	$headers = $self->_force_wrap_string($headers, 'start with a blank', 'no blank lines');
 
@@ -1865,7 +1864,7 @@ sub buildHeaders {
 	unless ($self->use_envelope){
 		my $h = $headers;	#can't just use $headers, we'll screw up the ref in _cached_headers
 		my $email = $self->extractEmail($data);
-		$h =~ s/^To:##EMAIL##/To:$email/m;
+		$h =~ s/^To: ##EMAIL##/To: $email/m;
 		return \$h;
 	};
 
@@ -2498,6 +2497,43 @@ Sure, anything you need to know.  Just drop me a message.
  ) || die Mail::Bulkmail->error();
 
  $bulk->mail('test@yourdomain.com') || die $bulk->error;
+
+#here, a fun one. Use a coderef as our LIST
+
+ my $query = "select email, domain from table order by domain";
+ my $stmt = $dbh->prepare($query) || die;
+ 
+ $stmt->execute || die;
+ 
+ sub get_list {
+ 	my $bulk = shift; #we always get our bulkmail object first
+ 	
+ 	my $data = $stmt->fetchrow_hashref();
+ 	
+ 	if ($data) {
+ 		return $data->{"email"};
+ 	}
+ 	else {
+ 		return undef;
+ 	};
+ };
+ 
+ $bulk->LIST(\&get_list);
+ 
+ #and now, logging to a coderef.
+ 
+ my $query = ('insert into table good_addresses (email) values (?)');
+ my $stmt = $dbh->prepare($query) || die;
+ 
+ sub store_to_db {
+ 	my $bulk	= shift; #always get our bulkmail object first
+ 	my $email	= shift;
+ 	
+ 	$stmt->execute($email) || return $bulk->error("Could not store to DB!");
+ 	return 1;
+ };
+ 
+ $bulk->GOOD(\&store_to_db);
 
 =head1 SAMPLE CONFIG FILE
 

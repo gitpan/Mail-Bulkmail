@@ -56,7 +56,7 @@ now, and it functions much better than previous versions did. Faster, more effic
 use Mail::Bulkmail;
 @ISA = qw(Mail::Bulkmail);
 
-$VERSION = '3.08';
+$VERSION = '3.09';
 
 use strict;
 use warnings;
@@ -874,7 +874,7 @@ sub buildHeaders {
 
 	my $headers = undef;
 
-	$headers .= "Date:" . $self->Date . "\015\012";
+	$headers .= "Date: " . $self->Date . "\015\012";
 
 	# keep track of the headers that we have set from dynamic_header_data
 	my $set = {};
@@ -889,7 +889,7 @@ sub buildHeaders {
 
 			next if $set->{$key}++;
 
-			$headers .= $key . ":" . $val . "\015\012";
+			$headers .= $key . ": " . $val . "\015\012";
 		};
 	};
 
@@ -897,41 +897,41 @@ sub buildHeaders {
 
 	unless ($set->{"From"}){
 		if (my $from = $self->From){
-			$headers .= "From:" . $from . "\015\012";
+			$headers .= "From: " . $from . "\015\012";
 		}
 		else {
 			return $self->error("Cannot bulkmail...no From address", "MBD013");
 		};
 	};
 
-	$headers .= "Subject:" . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
+	$headers .= "Subject: " . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
 
 	unless ($set->{"To"}){
 		if (my $to = $self->extractEmail($data)){
-			$headers .= "To:$to\015\012";
+			$headers .= "To: $to\015\012";
 		}
 		else {
 			return $self->error("Cannot bulkmail...no To address", "MBD014");
 		};
 	};
 
-	$headers .= "Sender:"			. ($self->Sender || $self->From)		. "\015\012" unless $set->{"Sender"};
-	$headers .= "Reply-To:"			. ($self->ReplyTo || $self->From)		. "\015\012" unless $set->{"ReplyTo"};
+	$headers .= "Sender: "			. ($self->Sender || $self->From)		. "\015\012" unless $set->{"Sender"};
+	$headers .= "Reply-To: "		. ($self->ReplyTo || $self->From)		. "\015\012" unless $set->{"ReplyTo"};
 
 	#we're always going to specify at least a list precedence
-	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};
+	$headers .= "Precedence: "		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};
 
 
 	unless ($self->{"Content-type"}){
 		if ($self->_headers->{"Content-type"}){
-			$headers .= "Content-type:" . $self->_headers->{"Content-type"} . "\015\012";
+			$headers .= "Content-type: " . $self->_headers->{"Content-type"} . "\015\012";
 		}
 		else {
 			if ($self->HTML){
-				$headers .= "Content-type:text/html\015\012";
+				$headers .= "Content-type: text/html\015\012";
 			}
 			else {
-				$headers .= "Content-type:text/plain\015\012";
+				$headers .= "Content-type: text/plain\015\012";
 			};
 		};
 	};
@@ -945,7 +945,7 @@ sub buildHeaders {
 
 		next if $set->{$key}++;
 
-		$headers .= $key . ":" . $val . "\015\012";
+		$headers .= $key . ": " . $val . "\015\012";
 	};
 
 	#do our global value merge
@@ -973,6 +973,9 @@ sub buildHeaders {
 			$headers =~ s/$key/$val/g;
 		};
 	};
+
+	# I'm taking credit for the mailing, dammit!
+	$headers .= "X-Bulkmail: " . $Mail::Bulkmail::Dynamic::VERSION . "\015\012";
 
 	$headers = $self->_force_wrap_string($headers, 'start with a blank', 'no blank lines');
 
@@ -1052,7 +1055,7 @@ sub buildMessage {
 	$message = $self->_force_wrap_string($message);
 
 	#double any periods that start lines
-	$message =~ s/^\././gm;
+	$message =~ s/^\./../gm;
 
 	#and force a CRLF at the end, unless one is already present
 	$message .= "\015\012" unless $message =~ /\015\012$/;

@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.08';
+$VERSION = '3.09';
 
 use Socket;
 use 5.6.0;
@@ -771,6 +771,7 @@ This method is known to be able to return:
  MBS012 - temporarily won't respond to speech...re-trying
  MBS013 - could never resolve temporary error
  MBS014 - timed out waiting for response
+ MBS018 - No file descriptor
 
 =cut
 
@@ -789,6 +790,11 @@ sub talk_and_respond {
 
 	local $\ = "\015\012";
 	local $/ = "\015\012";
+
+	unless (fileno($bulk)) {
+		$self->disconnect('quietly');
+		return $self->error("No file descriptor...socket appears to be closed. Disconnecting to be safe", "MBS018");
+	}; 
 
 	unless (print $bulk $talk){
 		return $self->error("Cannot talk to server : $!", "MBS007");
@@ -882,7 +888,6 @@ sub talk_and_respond {
 #make sure that we're disconnected
 sub DESTROY {
 	my $self = shift;
-
 	$self->disconnect if $self->connected;
 	$self = undef;
 };

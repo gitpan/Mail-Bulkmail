@@ -39,7 +39,7 @@ inspection at a later date.
 use Mail::Bulkmail::Server;
 @ISA = qw(Mail::Bulkmail::Server);
 
-$VERSION = '3.08';
+$VERSION = '3.09';
 
 use strict;
 use warnings;
@@ -58,7 +58,7 @@ Stores the dummy_file that you want to output your data to.
 
 =cut
 
-__PACKAGE__->add_class_attr('dummy_file');
+__PACKAGE__->add_attr('dummy_file');
 
 # this is used for tied filehandles to internally hold the dummy socket
 __PACKAGE__->add_attr('_socket');
@@ -83,18 +83,20 @@ This method is known to return
 sub connect {
 	my $self = shift;
 
-	local *SOCKET;
+	local $\ = "\015\012";
+	local $/ = "\015\012";
 
-	tie *SOCKET, "Mail::Bulkmail::DummyServer";
+	my $h = $self->gen_handle();
+	tie *$h, "Mail::Bulkmail::DummyServer", $self;
 
-	$self->socket(\*SOCKET);
+	$self->socket($h);
 
 	#We're either given a domain, or we'll build it based on who the message is from
 	my $domain = $self->Domain;
 
-	print SOCKET "EHLO $domain";
+	print $h "EHLO $domain";
 
-	my $response = <SOCKET> || "";
+	my $response = <$h> || "";
 	return $self->error("Server won't say EHLO: $response", "MBDu001") if ! $response || $response =~ /^[45]/;
 
 	$self->connected(1);
@@ -106,11 +108,10 @@ sub connect {
 # error if it can't), and then ties our filehandle to the just opened file.
 sub TIEHANDLE {
 
-	my $class = shift;
+	my $class	= shift;
+	my $self	= shift;
 
-	my $c = Mail::Bulkmail::Object->read_conf_file;
-
-	my $file = $class->dummy_file();
+	my $file = $self->dummy_file();
 
 	my $handle = Mail::Bulkmail::Object->gen_handle();
 
@@ -141,6 +142,11 @@ sub PRINT {
 	print $f @_ if $f;
 
 	return 1;
+};
+
+sub FILENO {
+	my $f = shift->_socket;
+	my $n = fileno($f);
 };
 
 # We can't read from this file, it's output only. However, we need to return something since
@@ -183,6 +189,10 @@ sub disconnect {
 	$self->talk_and_respond('RSET') unless $quietly;	#just to be polite
 	$self->talk_and_respond('quit') unless $quietly;
 
+	if (my $socket = $self->socket) {
+		close $socket;
+		$socket = undef;
+	};
 	$self->socket(undef);
 	$self->connected(0);
 	return $self;
