@@ -1,5 +1,14 @@
 Revision history for Perl extension Mail::Bulkmail.
 
+1.10  Wed Sep 08, 1999 
+        - Several little fixes.
+        - The module will now re-connect if it receives a 221 (connection terminated) 
+          message from the server.
+        - Fixed a potential near-infinite loop in the _valid_email routine.
+        - _valid_email now merrily strips away comments (even nested ones).  :)
+        - hfm (headers from message) method added.
+        - fmdl (filemap delimiter) method added.
+
 1.01  Wed Sep, 01, 1999
         - Fixed a bug in the email validation routine which would cause the module to hang severely
           on certain malformed addresses.  All is once again right with the world

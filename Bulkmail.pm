@@ -6,9 +6,10 @@ package Mail::Bulkmail;
 #modify it under the same terms as Perl itself.
 
 
-$VERSION = "1.01";
+$VERSION = "1.10";
 
 use Socket;
+
 use 5.004;
 
 #Let's make up some defaults:
@@ -23,36 +24,17 @@ $def_Duplicates	= 0;
 
 
 #Don't mess with these unless you have a damn good reason.
-$From		= 0;
-$_name		= 1;
-$Message	= 2;
-$Subject	= 3;
-$Map		= 4;
 
-$bulk		= 5;
-$LIST		= 6;
-$BAD		= 7;
-$GOOD		= 8;
-$ERROR		= 9;
-$BANNED		= 10;
-
-$Smtp		= 11;
-$Domain		= 12;
-$Port		= 13;
-$Tries		= 14;
-$Precedence	= 15;
-
-$connected	= 16;
-
-$Tz			= 17;
-$Date		= 18;
-
-$No_errors	= 19;
-$error		= 20;
-$Duplicates	= 21;
-$headers 	= 22;
-
-
+{
+	my $i = 0;
+	foreach ($From, $_name, $Message, $iMessage, $Subject, $Map,
+				$bulk, $LIST, $BAD, $GOOD, $ERROR, $BANNED,
+				$Smtp, $Domain, $Port, $Tries, $Precedence,
+				$connected,
+				$Tz, $Date,
+				$No_errors,$error,$Duplicates,$headers,$fmdl,$hfm){$_ = $i++};
+};
+			
 #default generating methods
 
 sub _def_From {return $def_From};
@@ -86,7 +68,7 @@ sub _def_Date{
 	$sec  = "0" . $sec if $sec < 10;
 	$year += 1900;		#RFC 1123 dates are 4 digit!
 	
-	return "Date : $days[$wday], $mday $months[$mon] $year $hour:$min:$sec " . $self->Tz;
+	return "$days[$wday], $mday $months[$mon] $year $hour:$min:$sec " . $self->Tz;
 	
 };
 
@@ -152,32 +134,24 @@ sub _valid_email {
 	my ($email) = @_;
 
 	$atom = q<[!#$%&'*+\-/=?^`{|}~\w]>;
-	$qstring = q/"(?:(?:[^"\\\\\015])+|(?:\\\.)+)+"/;
+	$qstring = q/"(?:[^"\\\\\015]|\\\.)+"/;
 	$word = "($atom+|$qstring)";
-	#$word = "($atom+)";
 
-	$email =~ m/^$word\s*\<\s*(.+)\s*\>\s*$/;		#match beginning phrases
+	$email = _comment_killer($email);
+
+	$email =~ m/^$word\s*\<\s*(.+)\s*\>\s*$/;			#match beginning phrases
 	
-	$email = $2 if $2;								#if we've got a phrase, we've extracted the e-mail address
-													#and stuck it in $2, so set $email to it.
-													#if we didn't have a phrase, the whole thing is the e-mail address
-
-
-	return undef if $email =~ m/@[^@]*"[^@]*$|^[^@]*$/;		#this is a band-aid to help us to check quoted strings in real time.
-															#We automatically bow out and return undef if in the last @ sign in the e-mail
-															#address has a " following it.  While we're at it, bow out if there's no @ sign
-															#at all in the e-mail address.
-															#Why do we do this?  Try commenting out this line and giving it:
-															#"this is a test of the e-mail capabilities of Mail::Bulkmail and I think it's neat"
-															#Then you'll understand why it's there.  :-)
-
+	$email = $2 if $2;									#if we've got a phrase, we've extracted the e-mail address
+														#and stuck it in $2, so set $email to it.
+														#if we didn't have a phrase, the whole thing is the e-mail address
+	
 	return $1 if $email =~ m<
-							^($word						#any word (see above)
+							^\s*($word					#any word (see above)
 							(?:\.$word)*				#optionally followed by a dot, and more words, as many times as we'd like
 							@							#and an at symbol
 							$atom+						#followed by as many atoms as we want
 							(?:\.$atom+)*				#optionally followed by a dot, and more atoms, as many times as we'd like
-							\.[a-zA-Z]{2,3})$			#followed by 2 or 3 letters, and an optional greater than
+							\.[a-zA-Z]{2,3})\s*$		#followed by 2 or 3 letters, and an optional greater than
 							>xo;						
 };
 
@@ -185,7 +159,18 @@ sub _valid_email {
 
 #normalization
 
+sub _comment_killer {
+
+	my ($email) = shift;
+	
+	while ($email =~ /\((?:[^()\\\015]|\\.)*\)/){$email =~ s/\((?:[^()\\\015]|\\.)*\)//};
+
+	return $email;
+};
+
 sub _normalize_Message {
+	
+	#double periods, change the line ends, etc.
 	
 	my ($self) = shift;
 	
@@ -204,6 +189,25 @@ sub _normalize_Message {
 	
 	
 	return $Message;
+};
+
+
+
+sub _fix {
+
+	#lowercase the domain part, but _not_ the local part.  Why not?
+	#Read the specs, you can't make assumptions about the local part, it is case sensitive
+	#even though 99.999% of the net treats it as insensitive.
+
+	my ($email) = shift;
+	
+	if ($email =~ /@/){
+		my ($local, $domain) = split(/@/, $email);
+		$email = "$local@" . lc $domain;
+	};
+	
+	return $email;
+	
 };
 
 #/normalization
@@ -238,7 +242,7 @@ sub _init {
 	$self->Map			($init{"Map"})		if defined $init{Map};
 	
 	#This is a band-aid to allow us to e-mail out messages with a name in the From field intact.
-	$self->_name		(_valid_email($init{From}) && $init{From}) || (_valid_email($def_From) && $def_From) || "Postmaster";
+	$self->_name		((_valid_email($init{From}) && $init{From}) || (_valid_email($def_From) && $def_From) || "");
 
 	#smtp related
 	$self->Smtp			($init{Smtp}		|| $def_Smtp);
@@ -253,6 +257,8 @@ sub _init {
 	$self->GOOD			($init{GOOD}		|| undef);
 	$self->ERROR		($init{ERROR}		|| undef);
 	$self->BANNED		($init{BANNED}		|| undef);
+	$self->fmdl			($init{fmdl}		|| "::");
+	$self->hfm			($init{hfm}			|| 0);
 
 	#date related
 	$self->Tz	(($self->No_errors && $init{Tz})	||	(_valid_Tz($init{Tz}) && $init{Tz})					|| _def_Tz);
@@ -266,7 +272,7 @@ sub _init {
 	
 	#and remove those defaults
 	delete @init{"From", "Subject", "Message", "Map", "Smtp", "Port", "Tries", "Precedence", "Domain", "LIST", "BAD",
-					"GOOD", "ERROR", "BANNED", "Tz", "Date"};
+					"GOOD", "ERROR", "BANNED", "fmdl", "hfm", "Tz", "Date"};
 	
 	#is there anything left?  We're gonna assume that they're headers for simplicity's sake.
 	#These things will get bounced down to headset, in the accessor method section.  
@@ -294,6 +300,7 @@ sub accessor {
 sub _name 		{ accessor(shift, $_name, @_)};
 sub Subject		{ accessor(shift, $Subject, @_)};
 sub Message		{ accessor(shift, $Message, @_)};
+sub iMessage	{ accessor(shift, $iMessage, @_)};
 sub Map			{ accessor(shift, $Map, @_ )};
 
 #smtp related accessors
@@ -307,6 +314,8 @@ sub LIST		{ accessor(shift, $LIST, @_)};
 sub BAD			{ accessor(shift, $BAD, @_)};
 sub GOOD		{ accessor(shift, $GOOD, @_)};
 sub ERROR		{ accessor(shift, $ERROR, @_)};
+sub fmdl		{ accessor(shift, $fmdl, @_)};
+sub hfm			{ accessor(shift, $hfm, @_)};
 
 #misc accessors
 sub No_errors	{ accessor(shift, $No_errors, @_)};
@@ -355,7 +364,6 @@ sub headset {
 
 };
 
-
 sub From { 
 
 	my ($self, $new_From) = @_;
@@ -363,6 +371,8 @@ sub From {
 	if (defined $new_From){$new_From = $self->[$From] || _def_From unless $self->No_errors || _valid_email($new_From)};
 	
 	$self->[$From] = $new_From if defined $new_From;
+
+	$self->_name((_valid_email($new_From) && $new_From) || undef) if defined($new_From);
 
 	return $self->[$From];
 	
@@ -391,7 +401,7 @@ sub BANNED {
 
 		while (defined ($address = <FILE>)){
 			chomp $address;
-			$banned{lc $address}++;
+			$banned{_fix($address)}++;
 			$self->[$BANNED] = \%banned;
 		};
 	}
@@ -512,30 +522,33 @@ sub mail {
 
 	#Overwrite any globals with BULK_FILEMAP values, don't overwrite anything re-declared in a local map
 	if (defined $map{BULK_FILEMAP}){
+		my $delimiter = $self->fmdl;
 		my @map = split(/::/, $map{BULK_FILEMAP});
-		my @values = split(/::/, $to);
+		my @values = split(/\Q$delimiter\E/, $to);
+		
 		foreach $item (@map){
 			$value = shift @values;
 			next if defined $local_map->{$item};
 			$map{$item} = $value;
 		};
 		$to = $map{BULK_EMAIL} unless _valid_email($to);
-		
 	};
 	
+	_fix($to);		#lowercase the domain.
+
 	#No point in going any further if it's an invalid e-mail address
 	return $self->error("Invalid e-mail address: $to", $full_to, "BAD") if $self->No_errors || ! _valid_email($to);
 	
 	#Check for duplicate addresses unless we've been told otherwise
 	unless ($self->Duplicates){
-		return $self->error("Duplicate address: $to", $full_to, "BAD") if $duplicates{$to}++;
+		return $self->error("Duplicate address: $to", $full_to, "BAD") if $duplicates{_fix(_comment_killer($to))}++;
 	};
 	
 	#Check for banned addresses if we have them
 	if ($self->BANNED){
 		my %banned = %{$self->BANNED};
 		my $domain;
-		return $self->error("Banned address: $to", $full_to, "BAD") if $banned{lc $to};
+		return $self->error("Banned address: $to", $full_to, "BAD") if $banned{_fix($to)};
 		
 		($domain = $to) =~ s/.*@//;
 		return $self->error("Banned domain: $domain", $full_to, "BAD") if $banned{lc $domain}; 
@@ -558,40 +571,87 @@ sub mail {
 	
 	#First thing we're gonna do is reset it in case there's any garbage sitting there.
 	print BULK "RSET";
-	
 	$response = <BULK>;
 	return $self->error("Cannot reset connection: $response") if $response =~ /^[45]/;
+	if ($response =~ /^221/){
+		$self->[$connected] = 0;
+		close BULK; 
+		return $self->error("Server disconnected: $response");
+	};
 	
 	#Who's the message from?
 	print BULK "MAIL FROM:<", $self->From, ">";
 	$response = <BULK>;
-	return $self->error("Invalid Sender: $response") if $response =~ /^[45]/;
+	return $self->error("Invalid Sender: $response <$to>") if $response =~ /^[45]/;
+	if ($response =~ /^221/){
+		$self->[$connected] = 0; 
+		close BULK; 
+		return $self->error("Server disconnected: $response");
+	};
 	
+	#Who's the message to?
 	print BULK "RCPT TO:<", $to, ">";
 	$response = <BULK>;
-	return $self->error("Invalid Recipient: $response") if $response =~ /^[45]/;
+	return $self->error("Invalid Recipient: $response <$to>") if $response =~ /^[45]/;
+	if ($response =~ /^221/){
+		$self->[$connected] = 0;
+		close BULK; 
+		return $self->error("Server disconnected: $response");
+	};
 	
+	#Let the server know we're gonna start sending data
 	print BULK "DATA";
 	$response = <BULK>;
 	return $self->error("Not ready to accept data: $response") if $response =~ /^[45]/;
+	if ($response =~ /^221/){
+		$self->[$connected] = 0; 
+		close BULK; 
+		return $self->error("Server disconnected: $response");
+	};		
+	
+	if ($self->hfm){		#get headers from message
+		$message = $self->_normalize_Message(\%map);
+		$message =~ m/^(.*?)\015\012\015\012(.*)$/s;
+
+		$self->iMessage($2);
+
+		my %headers = split(/\s*:\s*|\015\012/, $1);
+		$self->From($headers{From}) 					if defined $headers{From};
+		$self->Subject($headers{Subject}) 				if defined $headers{Subject};
+		$self->Date($headers{Date}) 					if defined $headers{Date};
+		$self->Precedence($headers{Precedence}) 		if defined $headers{Precedence};
+
+		delete @headers{"From", "Subject", "Date", "Precedence", "To"};
+		foreach $header (keys %headers){push @headers, "$header: $headers{$header}"};
+	}
+	else {$self->iMessage($self->_normalize_Message(\%map))};
+
+	
 	
 	#Print the headers that we care about
-	print BULK "From: "			, $self->_name;
-	print BULK "Subject: "		, $map{"Subject"} ? $map{"Subject"} : $self->Subject;
 	print BULK "Date: "	 		, $self->Date;
+	print BULK "From: "			, $self->_name;
+	print BULK "Subject: "		, $self->Subject;
+	print BULK "To: "			, $to;
 	print BULK "Precedence: "	, $self->Precedence; 
+	print BULK "X-Bulkmail: "	, "Mail Bulkmail $VERSION";
 	
 	#print out all the other headers
 	if (@headers){foreach (@headers){print BULK}};
 	
 	print BULK "";
 	
-	
-	print BULK $self->_normalize_Message(\%map);
+	#print out the message
+	print BULK $self->iMessage;
 	print BULK ".";
 	
 	$response = <BULK>;
 	return $self->error("Message not accepted for delivery: $response") if $response =~ /^[45]/;
+	if ($response =~ /^221/){
+		$self->[$connected] = 0; 
+		close BULK; 
+		return $self->error("Server disconnected: $response");
+	};
 	
 	$self->_log($full_to, "GOOD");
 	
@@ -610,6 +670,7 @@ sub bulkmail {
 
 	while (<LST>){
 		chomp;
+		$_ =~ s/(?:^\s+|\s+$)//g;	#trash trailing and leading white space
 		$self->mail($_, $local_map);
 	};
 
@@ -658,8 +719,12 @@ sub _log {
 	if ($self->$file()){
 		local *FILE;
 		*FILE = $self->$file();
+		select((select(FILE), $| = 1)[0]); 		#Make sure the file is piping hot!
 		
 		local $\ = undef;
+		
+		#get rid of those sendmail-ified carriage returns
+		$value =~ s/\015\012$//g;
 		
 		print FILE $value, "\n";
 	};
@@ -794,9 +859,11 @@ you've connected to a server.
 =item LIST
 
 This is a glob to a filehandle.  This is your actual list of e-mail addresses.  You can
-either have one e-mail address per line, or have an multiple "::" seperated fields in addition to the 
-e-mail address.  If you choose to use "::" fields, read the section on MAPPING, below.  This file
+either have one e-mail address per line, or have multiple delimited fields in addition to the 
+e-mail address.  If you choose to use delimited fields, read the section on MAPPING, below.  This file
 should be openned with read access.  Required if you're going to be bulkmailing.
+
+The default delimiter is "::", read the section on MAPPING and the fmdl method below.
 
 =item BAD
 
@@ -844,6 +911,41 @@ ERROR and you didn't turn Duplicates on.
 =item headset
 
 headset() is actually a method that pretends to be an accessor.  See ADDTIONAL ACCESSORS, below.
+
+=item hfm
+
+hfm (Headers From Message) will extract any valid headers from the message body.  A valid header is
+of the form "Name:value", one per line with an empty line seperating the headers from the message.
+
+It is B<much> better to explicitly set the headers using the headset method because it's a tougher 
+to make mistakes using headset.  Nonetheless, setting hfm to any true value will cause the module to
+look in the message for headers.  Any valid headers extracted from the message will override existing 
+headers.  Headers extracted from the message will be removed from the message body.
+
+But be perfectly sure you know what you're doing.
+
+	$bulk->hfm(1);
+	
+	$bulk->Message(
+		"This is my message.  I'm going to try sending it out to everyone that I know.
+		Messages are cool, e-mailing software is neat, and everyone will love me for it.
+		Oh happy day, happy happy day.
+		Love,
+		
+		Jim";
+
+Because hfm is set to true, the first four lines are extracted from the message and sent as headers.
+The extent of the message that goes through is "Jim" (everything after the first blank line which separates
+headers from message body).
+
+hfm is off by default.
+
+=item fmdl
+
+fmdl (filemap delimiter) tells the module what delimiter to use in the file when using BULK_FILEMAPs
+(see below)
+
+fmdl is "::" by default.
 
 =item No_errors
 
@@ -1047,9 +1149,9 @@ BULK_FILEMAP will be explained more below.
 =head2 BULK_FILEMAP
 
 Earlier we learned that LIST files may be in two formats, either a single e-mail address per line,
-or a "::" delimited list of values, one of which must be an e-mail address.
+or a delimited list of values, one of which must be an e-mail address.
 
-"::" delimited lists _must_ be used in conjunction with a BULK_FILEMAP parameter to Map.  BULK_FILEMAP
+Delimited lists _must_ be used in conjunction with a BULK_FILEMAP parameter to Map.  BULK_FILEMAP
 allows you to specify that each e-mail message will have unique values inserted for control strings
 without having to loop through the address list yourself and specify a new local map for every message.
 BULK_FILEMAP may only be set in a global map, its presence is ignored in local maps.
@@ -1064,7 +1166,7 @@ You can have a corresponding map as follows:
  		});
 
 This BULK_FILEMAP will operate the same way that the local map above operated.  "BULK_EMAIL" is the
-only required item, it is case sensitive.  This is where in your :: delimited line the e-mail
+only required item, it is case sensitive.  This is where in your delimited line the e-mail
 address of the recipient is.  "BULK_EMAIL" _is_ used as a control string in your message.  Be careful.
 So if you want to include someone's e-mail address within the text of your message, put the string
 "BULK_EMAIL" in your message body wherever you'd like to insert it.
@@ -1072,6 +1174,21 @@ So if you want to include someone's e-mail address within the text of your messa
 Everything else may be anything you'd like, these are the control
 strings that will be substituted for the values at that location in the line in the file.
 You may use global maps, BULK_FILEMAPs and local maps simultaneously.
+
+BULK_FILEMAPs are declared "::" delimited, however the data may be arbitrarily delimited in the actual file by
+using the fmdl method.  The default delimiter is "::", but as of version 1.10 and higher, you may use fmdl to 
+choose any arbitrary delimiter in the file.
+
+For example:
+
+	$bulk->fmdl("-+-");
+	
+	$bulk->Map({'BULK_FILEMAP'=>'BULK_EMAIL::ID::NAME'});
+	
+	(in your list file)
+	jim3@psynet.net-+-ID #1-+-Jim Thomason
+	jimt@playboy.com-+-ID #2-+-Jim Thomason
+	
 
 =head2 Map precedence
 
@@ -1145,38 +1262,56 @@ Check the return type of your functions, if it's 0, check ->error to find out wh
 
 =head1 HISTORY
 
-=over 4
+=over 14
 
-=item 1.01
+=item - 1.10 09/08/99 
 
-09/01/99 E-mail validation and date generation bug fixes
+Several little fixes.
 
-=item 1.00
+The module will now re-connect if it receives a 221 (connection terminated) message from the server.
 
-08/18/99 First public release onto CPAN
+Fixed a potential near-infinite loop in the _valid_email routine.
 
-=item 0.93
+_valid_email now merrily strips away comments (even nested ones).  :)
 
-08/12/99 Re-vamped the documentation substantially.
+hfm (headers from message) method added.
 
-=item 0.92
+fmdl (filemap delimiter) method added.
 
-08/12/99 Started adding a zero in front of the version name, just like I always should have
+=item - 1.01 09/01/99
+
+E-mail validation and date generation bug fixes
+
+=item - 1.00 08/18/99 
+
+First public release onto CPAN
+
+=item - 0.93 08/12/99
+
+Re-vamped the documentation substantially.
+
+=item - 0.92 08/12/99
+
+Started adding a zero in front of the version name, just like I always should have
+
 Changed accessing of non-standard headers so that they have to be accessed and retrieved
+
 via the "headset" method.  This is because methods cannot have non-word characters in them.
+
 From, Subject, and Precedence headers may also be accessed via headset, if you so choose.
+
 AUTOLOAD now complains loudly (setting ->error and printing to STDERR) if it's called.
 
-=item .91
+=item - 0.91 08/11/99
 
- 08/11/99 Fixed bugs in setting values which require validation checks.
- Fixed accessing of non-standard headers so that the returns are identical to every other accesor method.
+Fixed bugs in setting values which require validation checks.
+Fixed accessing of non-standard headers so that the returns are identical to every other accesor method.
 
-=item .90
-
-=back
+=item - 0.90
 
 08/10/99 Initial "completed" release.  First release available to general public.
+
+=back
 
 =head1 EXAMPLES
 
@@ -1220,7 +1355,7 @@ This list is then mailed to by simply calling
 $bulk->bulkmail();
 
 Easy as pie.  Especially considering that when we had to write all of this code out in our original
-implementation, it took up well over 100 lines.
+implementation, it took up well over 100 lines (and was 400x slower).
 
 =head2 Single mailing
 
@@ -1245,6 +1380,95 @@ implementation, it took up well over 100 lines.
 
 This will e-mail out a message identical to the one we bulkmailed up above, but it'll only go to
 jim3@psynet.net
+
+=head1 FAQ
+
+B<So just how fast is this thing, anyway?>
+
+Really fast.  Really stupendously incredibly fast.
+
+The largest list that I have data on has 91,140 people on it.  This list runs through to I<completion> in about
+an hour and 43 minutes, which means that Mail::Bulkmail can process (at least) 884 messages per minute or about
+53,100 per hour.
+
+B<So? How big were the individual messages sent out?  Total data transferred is what counts, not total recipients!>
+
+How right you are.  The last message sent out was 4,979 bytes.  4979 x 91,140 people is 453,786,060 bytes of data 
+transferred, or about 453.786 megabytes in 1 hour and 43 minutes.  This is a sustained transfer rate of about 4.4 megabytes
+per minute, or 264.34 megabytes per hour.
+
+B<Am I going to see transfer speeds that fast?>
+
+Maybe, maybe not.  It depends on how busy your SMTP server is.  If you have a relatively unused SMTP server with a fair amount
+of horsepower, you can easily get these speeds or beyond.  If you have a relatively busy and/or low powered SMTP server, you're
+not going to reach speeds that fast.
+
+B<How much faster will Mail::Bulkmail be than my current system?>
+
+This is a very tough question to answer, since it depends highly upon what your current system is.  For the sake of argument,
+let's assume that for your current system, you open an SMTP connection to your server, send a message, and close the connection.
+And then repeat.  Open, send, close, etc.
+
+Mail::Bulkmail will I<always> be faster than this approach since it opens one SMTP connection and send every single message across
+on that one connection.  How much faster depends on how busy your server is as well as the size of your list.
+
+Lets assume (for simplicity's sake) that you have a list of 100,000 people.  We'll also assume that you have a pretty busy
+SMTP server and it takes (on average) 25 seconds for the server to respond to a connection request.  We're making 100,000
+connection requests (with your old system).  That means 100,000 x 25 seconds = almost 29 days waiting just to make connections
+to the server!  Mail::Bulkmail makes one connection, takes 25 seconds for it, and ends up being 100,000x faster!
+
+But, now lets assume that you have a very unbusy SMTP server and it responds to connection requests in .003 seconds.  We're making
+100,000 connection requests.  That means 100,000 x 25 seconds = about 5 minutes waiting to make connections to the server.
+Mail::Bulkmail makes on connection, takes .0003 seconds for it, and ends up only being 1666x faster.  But, even though being
+1,666 times faster sounds impressive, the world won't stop spinning on its axis if you use your old system and take up an extra
+5 minutes.
+
+And this doesn't even begin to take into account systems that don't open and close SMTP connections for each message.
+
+In short, there's no way to tell how much of a speed increase you'll see.
+
+B<Have you benchmarked it against anything else?>
+
+Not scientifically.  I've heard that Mail::Bulkmail is about 4-5x faster than Listcaster from Mustang Software, but I don't
+have any hard numbers.  
+
+If you want to benchmark it against some other system and let me know the results, it'll be much appreciated.  :-)
+
+B<Wait a minute!  You said up there that Mail::Bulkmail opens one connection and sends all the messages through.  What happens
+if the connection is dropped midway through?>
+
+Well, either something good or something bad depending on what happens.  If it's something good, the server will send a 221 message
+(server closing) which Mail::Bulkmail should pick up and some point, realize its disconnected and then reconnect for the next
+message.  If it's something bad, the server will just stop replying and Mail::Bulkmail will sit there forever wondering why
+the server won't talk to it anymore.  
+
+Realistically, if your server bellyflopped and is not responding at all and won't even alert that it's disconnected, you probably
+have something serious to worry about.
+
+A future release will probably have a time-out option so Mail::Bulkmail will bow out and assume its disconnected after a
+certain period of time. 
+
+B<So what is it with these version numbers anyway?>
+
+I'm going to I<try> to be consistent in how I number the releases.
+
+The B<hundredths> digit will indicate bug fixes, etc.
+
+The B<tenths> digit will indicate new and/or better functionality, as well as some minor new features.
+
+The B<ones> digit will indicate a major new feature or re-write.
+
+Basically, if you have x.ab and x.ac comes out, you want to get it guaranteed.  Same for x.ad, x.ae, etc.
+
+If you have x.ac and x.ba comes out, you'll probably want to get it.  Invariably there will be bug fixes from the last "hundredths"
+release, but it'll also have additional features.  These will be the releases to be sure to read up on to make sure that nothing
+drastic has changes.
+
+If you have x.ac and y.ac comes out, it will be the same as x.ac->x.ba but on a much larger scale.
+
+B<Anything else you want to tell me?>
+
+Sure, anything you need to know.  Just drop me a message.
 
 =head1 MISCELLANEA
 
