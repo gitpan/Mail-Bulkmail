@@ -6,50 +6,74 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..1\n"; }
-END {print "not ok 1\n" unless $loaded;}
-use lib ("../", "../../");
-use Mail::Bulkmail 2.04;
+BEGIN { $| = 1; print "Starting tests\n\n"; }
+END {print "not ok 1\n\n" unless $loaded;}
+use Mail::Bulkmail;
 $loaded = 1;
-print "module loaded, continuing...\n\n";
 
-print "What is your email address? ";
-chomp(my $email = <STDIN>);
-print "\nWhat is your name? ";
-chomp (my $name = <STDIN>);
-print "\nWhat is the address of your smtp server? ";
-chomp (my $smtp = <STDIN>);
+my $ok = 1;
 
-eval {
- $bulk = Mail::Bulkmail->new(
- 	"LIST"	=> ['invalid_address::Invalid Address', $email . "::" . $name],
- 	"GOOD" => \&good,
- 	"BAD" => \&bad,
-	From	=> $email,
-	Subject	=> "Mail::Bulkmail $Mail::Bulkmail::VERSION test",
-	merge => {"BULK_MAILMERGE" => "BULK_EMAIL::NAME"},
-	Message	=> "Hi there, NAME.  Mail::Bulkmail seems to work fine!",
-	Smtp => $smtp,
-	"X-test" => "Bulkmail test!"
- ) or die Mail::Bulkmail->error();
- $bulk->bulkmail;
+print "loaded Mail::Bulkmail...ok ", $ok++, "\n\n";
 
+######################### End of black magic.
 
-};
+# Insert your test code below (better if it prints "ok 13"
+# (correspondingly "not ok 13") depending on the success of chunk 13
+# of the test code):
+
+use Mail::Bulkmail::Object;
+use Mail::Bulkmail::Dynamic;
+use Mail::Bulkmail::Server;
+use Mail::Bulkmail::DummyServer;
+
+$loaded = 1;
+
+print "Loaded all modules...ok ", $ok++, "\n\n";
+
+#create a DummyServer that sends to /dev/null
+my $dummy = Mail::Bulkmail::DummyServer->new(
+	'dummy_file'	=> '/dev/null',
+	'Domain'		=> 'yourdomain.com'
+) || die Mail::Bulkmail::DummyServer->error();
+
+print "Successfully created dummy server object...ok ", $ok++, "\n\n";
+
+print "okay...now I'm going to try a test message. Nothing will actually be sent...\n\n";
+
+my $bulk = Mail::Bulkmail->new(
+	'LIST'		=> [qw(valid_address@yourdomain.com invalid_address@yourdomain valid_address2@yourdomain.com)],
+	'GOOD'		=> \&good,
+	'BAD'		=> \&bad,
+	'From'		=> 'test@yourdomain.com',
+	'Message'	=> 'This is a test message',
+	'Subject'	=> "test message",
+	'servers'	=> [$dummy]
+) || die Mail::Bulkmail->error();
+
+print "Successfully created bulkmail object...ok ", $ok++, "\n\n";
+
+$bulk->bulkmail || die $bulk->error();
+
+print "Successfully bulkmailed...ok ", $ok++, "\n\n";
+
+print "All succesful...done\n\n";
 
 sub good {
-	print "Mail successfully sent to (@_)\n";
-	print "\n\nCheck your email account (@_) in a few minutes.  You should have a\n";
-	print "message waiting for you.  If you don't, then something went wrong...\n";
+	my $email = shift;
+	if ($email eq 'valid_address@yourdomain.com' || $email eq 'valid_address2@yourdomain.com'){
+		print "Mail successfully sent to $email...ok ", $ok++, "\n\n";
+	}
+	else {
+		print "Mail could not be sent to $email...not ok", $ok++, "\n\n";
+	};
 };
 
 sub bad {
-	print "Mail did not send to (@_)\n";
-	print "    (this is good...'invalid_address' is an internal test case)\n"
-		if join("", @_) =~ /invalid_address/;
+	my $email = shift;
+	if ($email eq 'invalid_address@yourdomain'){
+		print "Mail did not send to $email...ok ", $ok++, "\n\n";
+	}
+	else {
+		print "Mail could successfully sent to $email...not ok", $ok++, "\n\n";
+	};
 };
-
-print "\n\n=======\nBE SURE TO SET YOUR DEFAULTS IN THE MODULE!!!\n=======\n\n";
-
-print "...error: $@" if $@;
-

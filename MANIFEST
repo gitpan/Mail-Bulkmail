@@ -1,5 +1,11 @@
 Changes
 Makefile.PL
 MANIFEST
-Bulkmail.pm
 test.pl
+sample.cfg.file
+sample.server.file
+Bulkmail.pm
+Bulkmail/Object.pm
+Bulkmail/Server.pm
+Bulkmail/DummyServer.pm
+Bulkmail/Dynamic.pm
