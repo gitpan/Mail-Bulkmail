@@ -1,5 +1,15 @@
 Revision history for Perl extension Mail::Bulkmail.
 
+1.11  Tue Nov 09, 1999
+        - Banned addresses now checks entire address case
+          insensitively instead of leaving the local part
+          alone. Better safe than sorry.
+        - $self->fmdl is now used to split BULK_FILEMAP
+        - Various fixes suggested by Chris Nandor to make -w
+          shut up.
+        - Changed the way to provide local maps to mail and
+          bulkmail so it's more intuitive.
+
 1.10  Wed Sep 08, 1999 
         - Several little fixes.
         - The module will now re-connect if it receives a 221 (connection terminated) 
@@ -15,7 +25,6 @@ Revision history for Perl extension Mail::Bulkmail.
         - Altered default date generation to be RFC 1123 compliant (4 digit year)
         - changed date generation so that it adds a space after the comman after the day.
           This is because of a bug in Outlook that wouldn't recognize the date w/o the space.
-
 
 1.00  Wed Aug 18, 1999 
         - First public release onto CPAN
