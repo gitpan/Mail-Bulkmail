@@ -1,5 +1,12 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.11 Sun Nov 30, 2003
+	- love it when I discover bugs in the test suite! Fixed a potentially fatal bug when sending to domains under certain conditions
+	  (thanks to Eric Litman for discovering this)
+	- turned off some debugging code that had snuck by me
+	- updated the pod regarding message_from_file to help alleviate a possible PEBKAC issue
+	- the server_file can now accept more parameters, such as CONVERSATION, envelope_limit, etc.
+
 3.10 Tue Nov 25, 2003
 	- message_from_file was hopelessly broken. Now fixed.
 	- valid_email now returns a hash (see the pod)

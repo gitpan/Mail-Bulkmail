@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.10';
+$VERSION = '3.11';
 
 use Socket;
 use 5.6.0;
@@ -956,8 +956,11 @@ sub create_all_servers {
 
 	my $data = {'Smtp' => []};
 
-	foreach my $attribute (qw(Smtp Port Tries Domain max_messages max_messages_per_robin max_messages_per_connection
-								max_messages_while_awake sleep_length)) {
+	my @settables = qw(Smtp Port Tries Domain max_messages max_messages_per_robin max_messages_per_connection
+								max_messages_while_awake sleep_length max_connection_attempts envelope_limit
+								talk_attempts time_out CONVERSATION);
+
+	foreach my $attribute (@settables) {
 
 		foreach my $pkg (@{$class->isa_path() || []}){
 			foreach my $method (keys %{$conf->{$pkg}}){
@@ -978,8 +981,7 @@ sub create_all_servers {
 	while (@{$data->{"Smtp"}}){
 		my %init = ();
 
-		foreach my $attribute (qw(Smtp Port Tries Domain max_messages max_messages_per_robin max_messages_per_connection
-								max_messages_while_awake sleep_length)) {
+		foreach my $attribute (@settables) {
 			$init{$attribute} = shift @{$data->{$attribute}} if $data->{$attribute} && @{$data->{$attribute}};
 		};
 

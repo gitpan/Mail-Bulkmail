@@ -56,7 +56,7 @@ now, and it functions much better than previous versions did. Faster, more effic
 use Mail::Bulkmail;
 @ISA = qw(Mail::Bulkmail);
 
-$VERSION = '3.10';
+$VERSION = '3.11';
 
 use strict;
 use warnings;

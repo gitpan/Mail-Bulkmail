@@ -119,7 +119,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.10';
+$VERSION = '3.11';
 
 use Socket;
 
@@ -570,6 +570,24 @@ That file will be openned in read mode (if possible), read in, and stored as you
 that your entire message text will be read into memory - no matter how large the message may be.
 
 This is simply a shortcut so that you don't have to open and read in the message yourself.
+
+b<NOTE> This is a bit picky, to put it mildly. No doubt you've read that the constructor actually
+is taking in its arguments in an array, not a hash. So they're parsed in order, which means you need
+pass in message_from_file u<before> Message. i.e., this will work:
+
+ $bulk = Mail::Bulkmail->new(
+ 	'message_from_file' => 1,
+ 	'Message'			=> '/path/to/message.txt',
+ );
+
+But this will not:
+
+ $bulk = Mail::Bulkmail->new(
+ 	'Message'			=> '/path/to/message.txt',
+ 	'message_from_file' => 1,
+ );
+
+Ditto for using the mutators. Turn on the flag, i<then> specify the Message.
 
 =cut
 
@@ -1456,7 +1474,7 @@ This method is known to be able to return:
 		#and finally, a comment is a ( followed by arbitrary ccontent, followed by another )
 		my $comment = '(' . '\(' . qq<($fws?$ccontent)*$fws?> . '\)' . ')';
 
-		while ($email =~ /$comment/o){print "EM $email\n";$email =~ s/$comment//go};
+		while ($email =~ /$comment/o){$email =~ s/$comment//go};
 
 		return $email;
 	};
@@ -1654,7 +1672,7 @@ This method is known to be able to return:
 sub nextServer {
 	my $self = shift;
 
-	return $self->error("No servers", "MB011") unless @{$self->servers};
+	return $self->error("No servers", "MB011") unless $self->servers && @{$self->servers};
 
 	my $old_idx = $self->_server_index;
 	my $new_idx = ($old_idx + 1) % @{$self->servers};
@@ -2159,7 +2177,7 @@ sub bulkmail {
 
 					my $extracted_emails = $self->extractEmail($last_data);
 					if (defined $extracted_emails) {
-						$self->setDuplicate($email->{'extracted'});
+						$self->setDuplicate($extracted_emails->{'extracted'});
 					};
 
 					$self->_waiting_message(0);
@@ -2175,7 +2193,6 @@ sub bulkmail {
 				my $from = $from_hash->{'extracted'};
 
 				#say who the message is from
-				print "MAIL FROM : $from\n";
 				$server->talk_and_respond("MAIL FROM:<" . $from . ">") || next;
 
 				#now, since we know that we reset and sent MAIL FROM properly, we'll reset our counter

@@ -36,7 +36,7 @@ Go to town. Use it under the artistic license for Mail::Bulkmail use, distribute
 
 =cut
 
-$VERSION = '3.10';
+$VERSION = '3.11';
 
 use Socket;
 no warnings 'portable';
