@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.09';
+$VERSION = '3.10';
 
 use Socket;
 use 5.6.0;
@@ -693,10 +693,12 @@ sub connect {
 					};
 
 				};	#end successful EHLO
+
+				#clear our alarm
+				eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
+
 			}; #end eval wrapping up our time out
 
-			#clear our alarm
-			eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
 
 			if ($@){
 				return $self->error("Timed out waiting for response on connect", "MBS015");
@@ -794,7 +796,7 @@ sub talk_and_respond {
 	unless (fileno($bulk)) {
 		$self->disconnect('quietly');
 		return $self->error("No file descriptor...socket appears to be closed. Disconnecting to be safe", "MBS018");
-	}; 
+	};
 
 	unless (print $bulk $talk){
 		return $self->error("Cannot talk to server : $!", "MBS007");
@@ -872,10 +874,11 @@ sub talk_and_respond {
 			};
 
 		};	#end while
-	};	#end eval
 
-	#clear our alarm
-	eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
+		#clear our alarm
+		eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
+
+	};	#end eval
 
 	if ($@){
 		$self->disconnect('quietly');

@@ -119,7 +119,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.09';
+$VERSION = '3.10';
 
 use Socket;
 
@@ -184,6 +184,7 @@ i.e., "the group name", then a colon, then an optional list of email addresses, 
  $bulk->To('MyList:;');
 
 Are all valid addresses. Only the ->To attribute may accept group syntax emails
+
 =cut
 
 __PACKAGE__->add_attr(["To",			'_email_accessor'], 1);
@@ -449,21 +450,33 @@ sub Message {
 
 	if ($self->message_from_file) {
 
-		my $file = shift;
-		my $handle = $self->gen_handle;
+		my $file = shift @passed || $self->_message_file;
 
-		my $message = undef;
+		if (! defined $self->_message_file_access_time || $file ne $self->_message_file || -M $file < $self->_message_file_access_time) {
 
-		open ($handle, $file) || return $self->error("Could not open file for message: $!", "MB020");
+			$self->_message_file($file);
+			$self->_message_file_access_time(-M $file);
 
-		{
-			local $/ = undef;
-			$message = <$handle>;
-		}
+			#theoretically, you could call ->Message with no arguments but with message_from_file turned on
+			#in that case, you may re-read the file if it's been modified since you last looked at it.
+			#We're currently in that case. So we wipe out the previously _cached_message to be safe.
+			$self->_cached_message(undef);
 
-		close ($handle) || return $self->error("Could not close file for message: $!", "MB021");
+			my $handle = $self->gen_handle;
 
-		unshift @passed, $message;
+			my $message = undef;
+
+			open ($handle, $file) || return $self->error("Could not open file for message: $!", "MB020");
+
+			{
+				local $/ = undef;
+				$message = <$handle>;
+			}
+
+			close ($handle) || return $self->error("Could not close file for message: $!", "MB021");
+
+			unshift @passed, $message;
+		};
 	};
 
 	#first, wipe out any previously set headers_from_message
@@ -499,7 +512,6 @@ sub Message {
 					$last_header = $last_value = undef;
 				};
 				($last_header, $last_value) = split(/:/, $_, 2);
-				print "GOT ($last_header, $last_value)\n";
 				push @{$self->_previous_headers_from_message}, $last_header;
 			}
 			elsif (/^\s+/){
@@ -519,6 +531,26 @@ sub Message {
 	};
 
 	return $self->_Message(@passed);
+};
+
+# internal method. Looks to see if a the message is being read from disk. If so, if it
+# was modified since it was read, then it is not current. Otherwise, it is.
+
+sub _current_message {
+	my $self = shift;
+
+	if (
+		$self->message_from_file
+		&& (
+			! defined $self->_message_file_access_time
+			|| -M $self->_message_file < $self->_message_file_access_time
+			)
+		) {
+			return 0;
+	}
+	else {
+		return 1;
+	};
 };
 
 # internally stores the _cached_message for a given message. This is populated by the buildMessage()
@@ -542,6 +574,17 @@ This is simply a shortcut so that you don't have to open and read in the message
 =cut
 
 __PACKAGE__->add_attr('message_from_file');
+
+# internal caching attribute to store the message file. This way we will be able to re-open
+# and re-read the message file if it happened to change.
+
+__PACKAGE__->add_attr('_message_file');
+
+# internal attribute to store the time the message file was last accessed. This allows the message
+# file to change and be re-read, though lord knows why you'd want to necessarily do something like
+# that.
+
+__PACKAGE__->add_attr('_message_file_access_time');
 
 =pod
 
@@ -1323,10 +1366,18 @@ sub header {
 
 valid_email validates an email address and extracts the user@domain.com part of an address
 
- print $bulk->valid_email('jim@jimandkoka.com');					#prints jim@jimandkoka.com
- print $bulk->valid_email('"Jim Thomason"<jim@jimandkoka.com>');	#prints jim@jimandkoka.com
- print $bulk->valid_email('jim@jimandkoka.com');					#prints jim@jimandkoka.com
- print $bulk->valid_email('jim@@jimandkoka.com');					#prints nothing (invalid address)
+ print $bulk->valid_email('jim@jimandkoka.com')->{'extracted'};					#prints jim@jimandkoka.com
+ print $bulk->valid_email('"Jim Thomason"<jim@jimandkoka.com>')->{'extracted'};	#prints jim@jimandkoka.com
+ print $bulk->valid_email('jim@jimandkoka.com')->{'extracted'};					#prints jim@jimandkoka.com
+ print $bulk->valid_email('jim@@jimandkoka.com');								#prints nothing (invalid address)
+
+Note that as of v3.10, valid_email returns a hash with two keys upon success. 'original' contains the address as you
+passed it in, 'extracted' is the address person that was yanked out.
+
+ {
+ 	'original'	=> 'Jim Thomason'<jim@jimandkoka.com',
+ 	'extracted'	=> 'jim@jimandkoka.com',
+ }
 
 Given an invalid address, returns undef and sets an error as always.
 
@@ -1354,6 +1405,10 @@ This method is known to be able to return:
 		my $email			= shift;
 		my $allow_groups	= shift;
 
+		my $return_hash 	= {
+			'original' => $email
+		};
+
 		return $self->error("Cannot validate w/o email address", "MB006") unless $email;
 
 		$email = $self->_comment_killer($email);				#No one else handles comments, to my knowledge. Cool, huh?  :)
@@ -1361,17 +1416,20 @@ This method is known to be able to return:
 		# if we're trusting, trivially extract the address-spec and return it
 		if ($self->Trusting('email')){
 			$email =~ s/.+<(.+)>/$1/g;
-			return $email;
+			$return_hash->{'extracted'} = $email;
+			return $return_hash;
 		};
 
 		#okay, check our email address
 		if ($email =~ m!^$mailbox$!o){
-			return $1 || $2;	#our address could be in either place;
+			$return_hash->{'extracted'} = $1 || $2;	#our address could be in either place;
+			return $return_hash;
 		}
 		#if it fails as an email address and we allow groups, see if we were passed a group
 		elsif ($allow_groups && $email =~ m!^$group$!o){
 			#the $group regex can't extract emails, so we'll just return the whole thing.
-			return $email;
+			$return_hash->{'extracted'} = $email;
+			return $return_hash;
 		}
 		#finally, otherwise give an error
 		else {
@@ -1638,6 +1696,8 @@ sub nextServer {
 
 =item extractEmail
 
+The extract methods return results equivalent to the return of valid_email
+
 extracts the email address from the data passed in the bulkmail object. Not necessary in Mail::Bulkmail, since all it
 does in here is reflect through the same value that is passed.
 
@@ -1659,6 +1719,66 @@ sub extractEmail {
 
 	return $self->valid_email($$email);
 
+};
+
+=pod
+
+=item extractSender
+
+The extract methods return results equivalent to the return of valid_email
+
+extracts the sender of the message from the data passed in the bulkmail object. Not necessary in Mail::Bulkmail, since
+all it does in here is return either the Bulkmail object's Sender or its From field.
+
+This will be very important in a subclass, though. getNextLine might return values beyond just simple email addresses
+in subclasses - hashes, object, whatever. You name it. In that case, extractEmail is necessary to find the actual email
+address out of whatever it is that was returned from getNextLine().
+
+But here? Nothing to worry about.
+
+=cut
+
+sub extractSender {
+	my $self = shift;
+
+	#we cheat like a madman in this method. We -know- that the Sender and the From are valid, since we validated
+	#them before they're insered. So we do the trivial extract and return that way.
+
+	my $sender = $self->Sender || $self->From;
+	my $return_hash = {'original' => $sender};
+	$sender =~ s/.+<(.+)>/$1/g;
+	$return_hash->{'extracted'} = $sender;
+	return $return_hash;
+};
+
+=pod
+
+=item extractReplyTo
+
+The extract methods return results equivalent to the return of valid_email
+
+extracts the Reply-To of the message from the data passed in the bulkmail object. Not necessary in Mail::Bulkmail, since
+all it does in here is return either the Bulkmail object's Sender or its From field.
+
+This will be very important in a subclass, though. getNextLine might return values beyond just simple email addresses
+in subclasses - hashes, object, whatever. You name it. In that case, extractEmail is necessary to find the actual email
+address out of whatever it is that was returned from getNextLine().
+
+But here? Nothing to worry about.
+
+=cut
+
+sub extractReplyTo {
+	my $self = shift;
+
+	#we cheat like a madman in this method. We -know- that the Sender and the From are valid, since we validated
+	#them before they're insered. So we do the trivial extract and return that way.
+
+	my $replyto = $self->ReplyTo || $self->From;
+	my $return_hash = {'original' => $replyto};
+	$replyto =~ s/.+<(.+)>/$1/g;
+	$return_hash->{'extracted'} = $replyto;
+	return $return_hash;
 };
 
 =pod
@@ -1797,7 +1917,8 @@ sub buildHeaders {
 
 		my $headers = ${$self->_cached_headers};
 
-		my $email = $self->extractEmail($data);
+		my $extracted_emails = $self->extractEmail($data);
+		my $email = $extracted_emails->{'original'};
 
 		$headers =~ s/^To: ##EMAIL##/To: $email/m;
 
@@ -1825,8 +1946,15 @@ sub buildHeaders {
 		return $self->error("Cannot bulkmail...no To address", "MB015");
 	};
 
-	$headers .= "Sender: "		. ($self->Sender || $self->From)		. "\015\012";
-	$headers .= "Reply-To: "	. ($self->ReplyTo || $self->From)		. "\015\012";
+	my $sender_hash = $self->extractSender($data);
+	if (defined $sender_hash) {
+		$headers .= "Sender: "		. $sender_hash->{'original'}		. "\015\012";
+	}
+
+	my $reply_to_hash = $self->extractReplyTo($data);
+	if (defined $reply_to_hash) {
+		$headers .= "Reply-To: "	. $reply_to_hash->{'original'}		. "\015\012";
+	};
 
 	#we're always going to specify at least a list precedence
 	$headers .= "Precedence: "		. ($self->Precedence || 'list')			. "\015\012";
@@ -1863,7 +1991,8 @@ sub buildHeaders {
 
 	unless ($self->use_envelope){
 		my $h = $headers;	#can't just use $headers, we'll screw up the ref in _cached_headers
-		my $email = $self->extractEmail($data);
+		my $extracted_emails = $self->extractEmail($data);
+		my $email = $extracted_emails->{'original'};
 		$h =~ s/^To: ##EMAIL##/To: $email/m;
 		return \$h;
 	};
@@ -1895,11 +2024,13 @@ sub buildMessage {
 	my $data	= shift;
 
 	#if we've cached the message, then return it
-	return $self->_cached_message if $self->_cached_message;
+	return $self->_cached_message if $self->_cached_message && $self->_current_message;
 
 	#otherwise, use the Message, cache that and return it.
 	my $message	= $self->Message()
 		|| return $self->error("Cannot build message w/o message", "MB016");
+
+	return $message if ref $message;
 
 	#sendmail-ify our line breaks
 	$message =~ s/(?:\r?\n|\r\n?)/\015\012/g;
@@ -1964,7 +2095,10 @@ sub bulkmail {
 					$server->talk_and_respond($$headers . $$message) if $rc;
 				}
 
-				$self->setDuplicate($self->extractEmail($last_data));
+				my $extracted_emails = $self->extractEmail($last_data);
+				if (defined $extracted_emails) {
+					$self->setDuplicate($extracted_emails->{'extracted'});
+				};
 			};
 
 			$server = $self->nextServer || return undef;
@@ -1981,7 +2115,8 @@ sub bulkmail {
 
 		$data = $self->preprocess($data) || next;
 
-		my $email = $self->extractEmail($data) || next;
+		my $extracted_emails = $self->extractEmail($data) || next;
+		my $email = $extracted_emails->{'extracted'};
 
 		#check for duplicates or banned addresses
 		if ($self->isDuplicate($email)){
@@ -2022,7 +2157,10 @@ sub bulkmail {
 						$server->talk_and_respond($$headers . $$message) if $rc;
 					}
 
-					$self->setDuplicate($self->extractEmail($last_data));
+					my $extracted_emails = $self->extractEmail($last_data);
+					if (defined $extracted_emails) {
+						$self->setDuplicate($email->{'extracted'});
+					};
 
 					$self->_waiting_message(0);
 				};
@@ -2031,10 +2169,13 @@ sub bulkmail {
 
 				$server->talk_and_respond("RSET") || next;
 
-				my $from = $self->valid_email($self->Sender || $self->From)
+				my $from_hash = $self->extractSender($data)
 					|| return $self->error("Could not get valid sender/from address", "MB019");
 
+				my $from = $from_hash->{'extracted'};
+
 				#say who the message is from
+				print "MAIL FROM : $from\n";
 				$server->talk_and_respond("MAIL FROM:<" . $from . ">") || next;
 
 				#now, since we know that we reset and sent MAIL FROM properly, we'll reset our counter
@@ -2093,7 +2234,10 @@ sub bulkmail {
 			$server->talk_and_respond($$headers . $$message) if $rc;
 		}
 
-		$self->setDuplicate($self->extractEmail($last_data));
+		my $extracted_emails = $self->extractEmail($last_data);
+		if (defined $extracted_emails) {
+			$self->setDuplicate($extracted_emails->{'extracted'});
+		};
 
 		$self->_waiting_message(0);
 	};
@@ -2137,7 +2281,8 @@ sub mail {
 
 	$data = $self->preprocess($data);
 
-	my $email	= $self->extractEmail($data) || return undef;
+	my $extracted_emails = $self->extractEmail($data) || return undef;
+	my $email = $extracted_emails->{'extracted'};
 
 	if (my $b = $self->isBanned($email)){
 
@@ -2151,8 +2296,10 @@ sub mail {
 	$server->talk_and_respond("RSET")
 		|| return $self->error($server->error, $server->errcode, 'not logged');
 
-	my $from = $self->valid_email($self->Sender || $self->From)
+	my $from_hash = $self->extractSender($data)
 		|| return $self->error("Could not get valid sender/from address", "MB019");
+
+	my $from = $from_hash->{'extracted'};
 
 	#say who the message is from
 	$server->talk_and_respond("MAIL FROM:<" . $from . ">")
@@ -2502,14 +2649,14 @@ Sure, anything you need to know.  Just drop me a message.
 
  my $query = "select email, domain from table order by domain";
  my $stmt = $dbh->prepare($query) || die;
- 
+
  $stmt->execute || die;
- 
+
  sub get_list {
  	my $bulk = shift; #we always get our bulkmail object first
- 	
+
  	my $data = $stmt->fetchrow_hashref();
- 	
+
  	if ($data) {
  		return $data->{"email"};
  	}
@@ -2517,22 +2664,22 @@ Sure, anything you need to know.  Just drop me a message.
  		return undef;
  	};
  };
- 
+
  $bulk->LIST(\&get_list);
- 
+
  #and now, logging to a coderef.
- 
+
  my $query = ('insert into table good_addresses (email) values (?)');
  my $stmt = $dbh->prepare($query) || die;
- 
+
  sub store_to_db {
  	my $bulk	= shift; #always get our bulkmail object first
  	my $email	= shift;
- 	
+
  	$stmt->execute($email) || return $bulk->error("Could not store to DB!");
  	return 1;
  };
- 
+
  $bulk->GOOD(\&store_to_db);
 
 =head1 SAMPLE CONFIG FILE

@@ -56,7 +56,7 @@ now, and it functions much better than previous versions did. Faster, more effic
 use Mail::Bulkmail;
 @ISA = qw(Mail::Bulkmail);
 
-$VERSION = '3.09';
+$VERSION = '3.10';
 
 use strict;
 use warnings;
@@ -847,6 +847,68 @@ sub extractEmail {
 
 };
 
+=item extractSender
+
+extractSender is an overridden method from Mail::Bulkmail. Most of the time when you're in Mail::Bulkmail::Dynamic,
+the data structure that's passed around internally is a hashref, and the sender is at the key BULK_SENDER.
+
+This extracts that key and returns it. Again, this method is used internally and is not something you need to worry about.
+
+This method is known to be able to return:
+
+ MBD015 - no BULK_SENDER defined
+
+=cut
+
+sub extractSender {
+
+	my $self = shift;
+	my $data = shift;
+
+	#if this is a hash, then we'll assume that we want the BULK_SENDER key out of it.
+	if (ref $data eq "HASH"){
+
+		#return the BULK_SENDER key if we have it, an error otherwise
+		if ($data->{"BULK_SENDER"}){
+			return $self->valid_email($data->{"BULK_SENDER"});
+		}
+	}
+	#otherwise, it's assumed to be a single email address, so we just use the super method
+	return $self->SUPER::extractSender($data, @_);
+
+};
+
+=item extractReplyTo
+
+extractReplyTo is an overridden method from Mail::Bulkmail. Most of the time when you're in Mail::Bulkmail::Dynamic,
+the data structure that's passed around internally is a hashref, and the email address is at the key BULK_REPLYTO.
+
+This extracts that key and returns it. Again, this method is used internally and is not something you need to worry about.
+
+This method is known to be able to return:
+
+ MBD016 - no BULK_REPLYTO defined
+
+=cut
+
+sub extractReplyTo {
+
+	my $self = shift;
+	my $data = shift;
+
+	#if this is a hash, then we'll assume that we want the BULK_REPLYTO key out of it.
+	if (ref $data eq "HASH"){
+
+		#return the BULK_REPLYTO key if we have it, an error otherwise
+		if ($data->{"BULK_REPLYTO"}){
+			return $self->valid_email($data->{"BULK_REPLYTO"});
+		}
+	}
+	#otherwise, it's assumed to be a single email address, so we just use the super method
+	return $self->SUPER::extractReplyTo($data, @_);
+
+};
+
 =pod
 
 =item buildHeaders
@@ -907,7 +969,8 @@ sub buildHeaders {
 	$headers .= "Subject: " . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
 
 	unless ($set->{"To"}){
-		if (my $to = $self->extractEmail($data)){
+		if (my $to_hash = $self->extractEmail($data)){
+			my $to = $to_hash->{'original'};
 			$headers .= "To: $to\015\012";
 		}
 		else {
@@ -915,8 +978,15 @@ sub buildHeaders {
 		};
 	};
 
-	$headers .= "Sender: "			. ($self->Sender || $self->From)		. "\015\012" unless $set->{"Sender"};
-	$headers .= "Reply-To: "		. ($self->ReplyTo || $self->From)		. "\015\012" unless $set->{"ReplyTo"};
+	my $sender_hash = $self->extractSender($data);
+	if (! $set->{"Sender"} && defined $sender_hash) {
+		$headers .= "Sender: "		. $sender_hash->{'original'}		. "\015\012";
+	}
+
+	my $reply_to_hash = $self->extractReplyTo($data);
+	if (! $set->{"ReplyTo"} && defined $reply_to_hash) {
+		$headers .= "Reply-To: "	. $reply_to_hash->{'original'}		. "\015\012";
+	};
 
 	#we're always going to specify at least a list precedence
 	$headers .= "Precedence: "		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};

@@ -36,7 +36,7 @@ Go to town. Use it under the artistic license for Mail::Bulkmail use, distribute
 
 =cut
 
-$VERSION = '3.09';
+$VERSION = '3.10';
 
 use Socket;
 no warnings 'portable';
@@ -613,7 +613,7 @@ sub error {
 		$self->$codemethod(defined $code ? $code : undef);
 		$self->logToFile($self->ERRFILE, "error: $error" . (defined $code ? "\tcode : $code" : '')) if !$nolog && $self->ERRFILE && $error;
 
-		return wantarray ? () : undef;
+		return;
 	}
 	else {
 		return $self->$errormethod();
@@ -667,6 +667,37 @@ sub errstring {
 		 . ")";
 
 };
+
+=pod
+
+=item errvals
+
+similar to errstring, but returns the error and errcode in an array. This is great for bubbling
+up error messages.
+
+ $attribute = $obj->foo() || return $self->error($obj->errvals);
+
+=cut
+
+sub errvals {
+	my $self = shift;
+
+	my @return = ();
+
+	if (defined $self->error) {
+		push @return, $self->error;
+	}
+	elsif (defined $self->errcode) {
+		push @return, undef;
+	};
+
+	if (defined $self->errcode) {
+		push @return, $self->errcode;
+	};
+
+	return @return;
+};
+
 
 =pod
 
@@ -1369,14 +1400,16 @@ the :ID syntax for that.
 
  define package SomeClass
 
+ #everyone else gets this value
+ foo = 11
+
  #user 87 gets this value
  87:foo	= 9
 
  #user 93 gets this value
  93:foo = 10
 
- #everyone else gets this value
- foo = 11
+Note that a default value must be listed FIRST, or it will override any user specific values.
 
 =head1 SAMPLE CONF FILE
 

@@ -39,7 +39,7 @@ inspection at a later date.
 use Mail::Bulkmail::Server;
 @ISA = qw(Mail::Bulkmail::Server);
 
-$VERSION = '3.09';
+$VERSION = '3.10';
 
 use strict;
 use warnings;

@@ -1,5 +1,17 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.10 Tue Nov 25, 2003
+	- message_from_file was hopelessly broken. Now fixed.
+	- valid_email now returns a hash (see the pod)
+	- extractEmail now returns a hash (see the pod)
+	- added extractSender and extractReplyTo for dynamic senders and replies-to
+	- added the errvals method
+	- Timeouts were still breaking under Windows. Now fixed.
+	  (thanks to Finn Smith for pointing this out)
+	- Fixed a pod formatting flaw
+	  (thanks to Todd Karlsson for pointing this out)
+	- error now just returns (additionally appropriately returning void in a void context)
+
 3.09 Fri Apr 04, 2003
 	- Mail::Bulkmail::Dynamic wasn't properly doubling periods. Oops.
 	  (thanks to Matthew Williams for pointing this out)
