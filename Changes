@@ -1,5 +1,13 @@
 Revision history for Perl extension Mail::Bulkmail.
 
+1.01  Wed Sep, 01, 1999
+        - Fixed a bug in the email validation routine which would cause the module to hang severely
+          on certain malformed addresses.  All is once again right with the world
+        - Altered default date generation to be RFC 1123 compliant (4 digit year)
+        - changed date generation so that it adds a space after the comman after the day.
+          This is because of a bug in Outlook that wouldn't recognize the date w/o the space.
+
+
 1.00  Wed Aug 18, 1999 
         - First public release onto CPAN
       

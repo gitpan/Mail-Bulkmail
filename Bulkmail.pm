@@ -6,7 +6,7 @@ package Mail::Bulkmail;
 #modify it under the same terms as Perl itself.
 
 
-$VERSION = "1.00";
+$VERSION = "1.01";
 
 use Socket;
 use 5.004;
@@ -83,8 +83,10 @@ sub _def_Date{
 	
 	$hour = "0" . $hour if $hour < 10;
 	$min  = "0" . $min  if $min < 10;
+	$sec  = "0" . $sec if $sec < 10;
+	$year += 1900;		#RFC 1123 dates are 4 digit!
 	
-	return "Date : $days[$wday],$mday $months[$mon] $year $hour:$min:$sec " . $self->Tz;
+	return "Date : $days[$wday], $mday $months[$mon] $year $hour:$min:$sec " . $self->Tz;
 	
 };
 
@@ -152,18 +154,31 @@ sub _valid_email {
 	$atom = q<[!#$%&'*+\-/=?^`{|}~\w]>;
 	$qstring = q/"(?:(?:[^"\\\\\015])+|(?:\\\.)+)+"/;
 	$word = "($atom+|$qstring)";
+	#$word = "($atom+)";
 
-	return $2 if $email =~ m<
-							^(?:$word\s*\<\s*)?			#Optional beginning phrase
-							($word+						#any word (see above)
-							(?:\.$word+)*				#optionally followed by a dot, and more words, as many times as we'd like
+	$email =~ m/^$word\s*\<\s*(.+)\s*\>\s*$/;		#match beginning phrases
+	
+	$email = $2 if $2;								#if we've got a phrase, we've extracted the e-mail address
+													#and stuck it in $2, so set $email to it.
+													#if we didn't have a phrase, the whole thing is the e-mail address
+
+
+	return undef if $email =~ m/@[^@]*"[^@]*$|^[^@]*$/;		#this is a band-aid to help us to check quoted strings in real time.
+															#We automatically bow out and return undef if in the last @ sign in the e-mail
+															#address has a " following it.  While we're at it, bow out if there's no @ sign
+															#at all in the e-mail address.
+															#Why do we do this?  Try commenting out this line and giving it:
+															#"this is a test of the e-mail capabilities of Mail::Bulkmail and I think it's neat"
+															#Then you'll understand why it's there.  :-)
+
+	return $1 if $email =~ m<
+							^($word						#any word (see above)
+							(?:\.$word)*				#optionally followed by a dot, and more words, as many times as we'd like
 							@							#and an at symbol
 							$atom+						#followed by as many atoms as we want
 							(?:\.$atom+)*				#optionally followed by a dot, and more atoms, as many times as we'd like
-							\.[a-zA-Z]{2,3})\s*\>?\s*$	#followed by 2 or 3 letters, and an optional greater than
-							>xo;						#I know this will match "Jim<jimt@playboy.com"  I don't care.
-														#it's a hassle to fix and generally not worth it.  phrased-addresses only matter
-														#in the from field anyway.
+							\.[a-zA-Z]{2,3})$			#followed by 2 or 3 letters, and an optional greater than
+							>xo;						
 };
 
 #/validation
@@ -223,7 +238,7 @@ sub _init {
 	$self->Map			($init{"Map"})		if defined $init{Map};
 	
 	#This is a band-aid to allow us to e-mail out messages with a name in the From field intact.
-	$self->_name		(_valid_email($init{From}) && $init{From}) || (_valid_email($def_From) && $def_From) || undef;
+	$self->_name		(_valid_email($init{From}) && $init{From}) || (_valid_email($def_From) && $def_From) || "Postmaster";
 
 	#smtp related
 	$self->Smtp			($init{Smtp}		|| $def_Smtp);
@@ -1131,6 +1146,10 @@ Check the return type of your functions, if it's 0, check ->error to find out wh
 =head1 HISTORY
 
 =over 4
+
+=item 1.01
+
+09/01/99 E-mail validation and date generation bug fixes
 
 =item 1.00
 
