@@ -59,6 +59,7 @@ print "Successfully bulkmailed...ok ", $ok++, "\n\n";
 print "All succesful...done\n\n";
 
 sub good {
+	my $obj = shift;
 	my $email = shift;
 	if ($email eq 'valid_address@yourdomain.com' || $email eq 'valid_address2@yourdomain.com'){
 		print "Mail successfully sent to $email...ok ", $ok++, "\n\n";
@@ -69,6 +70,7 @@ sub good {
 };
 
 sub bad {
+	my $obj = shift;
 	my $email = shift;
 	if ($email eq 'invalid_address@yourdomain'){
 		print "Mail did not send to $email...ok ", $ok++, "\n\n";

@@ -9,7 +9,7 @@ package Mail::Bulkmail;
 
 =head1 NAME
 
-Mail::Bulkmail 3.02 - Platform independent mailing list module
+Mail::Bulkmail 3.03 - Platform independent mailing list module
 
 =head1 AUTHOR
 
@@ -120,7 +120,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = "3.02";
+$VERSION = "3.03";
 
 use Socket;
 use 5.6.0;
@@ -504,7 +504,7 @@ If a globref, it is assumed to be an open filehandle in append mode:
  
 if a coderef, it is assumed to be a function to call with the address as an argument:
 
- sub B { print "BAD ADDRESS : ", shift, "\n"};	#or whatever your code is
+ sub B { print "BAD ADDRESS : ", $_[1], "\n"};	#or whatever your code is
  $bulk->BAD(\&B);
  
 if an arrayref, then bad addresses will be pushed on to the end of it
@@ -536,7 +536,7 @@ If a globref, it is assumed to be an open filehandle in append mode:
  
 if a coderef, it is assumed to be a function to call with the address as an argument:
 
- sub G { print "GOOD ADDRESS : ", shift, "\n"};	#or whatever your code is
+ sub G { print "GOOD ADDRESS : ", $_[1], "\n"};	#or whatever your code is
  $bulk->GOOD(\&G);
  
 if an arrayref, then bad addresses will be pushed on to the end of it
@@ -996,7 +996,7 @@ sub new {
 	#that they want to set it as a header
 	foreach my $key (grep {! $self->can($_)} keys %init){
 		next if $key eq 'server_file';	#special case to allow passing of a separate server_file
-		$self->header($key, $init{$key}) || return $class->error($self->error, $self->errcode);
+		$self->header($key, $init{$key}) || return $class->error($self->error, $self->errcode, 'not logged');
 	};
 
 	#if we have no servers, but we do have a server file (which we should...)
@@ -1773,7 +1773,7 @@ sub buildMessage {
 	
 	#and force a CRLF at the end, unless one is already present
 	$message .= "\015\012" unless $message =~ /\015\012$/;
-	$message .= ".\015\012";
+	$message .= ".";
 	
 	$message = $self->_force_wrap_string($message);
 
@@ -1817,17 +1817,16 @@ sub bulkmail {
 			#if a message is waiting on the previous server, then finish it off
 			if ($self->_waiting_message) {
 
-				my $rc = $server->talk_and_respond("DATA");
-				
-				#don't bother sending anything else if it didn't accept data
-				if ($rc){
-					my $headers = $self->buildHeaders($last_data);
+				my $headers = $self->buildHeaders($last_data);
 		
-					my $message = $self->buildMessage($last_data);
-					$server->talk_and_respond($$headers . $$message) if $headers && $message;
-					# we don't care if there's an error here, since it was on the prior message and it should've been
-					# logged
-				};
+				my $message = $self->buildMessage($last_data);
+		
+				# it is *imperative* that we only send DATA if we have the headers and message body.
+				# otherwise, the server will hang.
+				if ($headers && $message) {
+					my $rc = $server->talk_and_respond("DATA");
+					$server->talk_and_respond($$headers . $$message) if $rc;
+				}
 						
 				$self->setDuplicate($self->extractEmail($last_data));
 			};
@@ -1876,22 +1875,24 @@ sub bulkmail {
 		
 				#if a message is waiting, then finish it off
 				if ($self->_waiting_message) {
-					my $rc = $server->talk_and_respond("DATA");
-
-					#only proceed if it accepted DATA
-					if ($rc){
-						my $headers = $self->buildHeaders($data);
-
-						my $message = $self->buildMessage($data);
-						$server->talk_and_respond($$headers . $$message) if $headers && $message;
-						# we don't care if there's an error here, since it was on the prior message and it should've been
-						# logged
-					};
+					my $headers = $self->buildHeaders($last_data);
+			
+					my $message = $self->buildMessage($last_data);
+			
+					# it is *imperative* that we only send DATA if we have the headers and message body.
+					# otherwise, the server will hang.
+					if ($headers && $message) {
+						my $rc = $server->talk_and_respond("DATA");
+						$server->talk_and_respond($$headers . $$message) if $rc;
+					}
+							
+					$self->setDuplicate($self->extractEmail($last_data));
 					
 					$self->_waiting_message(0);
 				};
 				
 				#reset our connection, just to be safe
+
 				$server->talk_and_respond("RSET") || next;
 
 				my $from = $self->valid_email($self->Sender || $self->From)
@@ -1945,17 +1946,17 @@ sub bulkmail {
 	#if a message is waiting, then finish it off
 	if ($self->_waiting_message) {
 
-		my $rc = $server->talk_and_respond("DATA");
-		
-		#don't bother sending anything more if it didn't accept DATA
-		if ($rc){
-			my $headers = $self->buildHeaders($last_data);
+		my $headers = $self->buildHeaders($last_data);
 
-			my $message = $self->buildMessage($last_data);
-			$server->talk_and_respond($$headers . $$message) if $headers && $message;
-			# we don't care if there's an error here, since it was on the prior message and it should've been
-			# logged
-		};			
+		my $message = $self->buildMessage($last_data);
+
+		# it is *imperative* that we only send DATA if we have the headers and message body.
+		# otherwise, the server will hang.
+		if ($headers && $message) {
+			my $rc = $server->talk_and_respond("DATA");
+			$server->talk_and_respond($$headers . $$message) if $rc;
+		}
+				
 		$self->setDuplicate($self->extractEmail($last_data));
 		
 		$self->_waiting_message(0);
@@ -2010,26 +2011,30 @@ sub mail {
 	};
 
 	#reset our connection, just to be safe
+
 	$server->talk_and_respond("RSET")
-		|| return $self->error($server->error, $server->errcode);
+		|| return $self->error($server->error, $server->errcode, 'not logged');
 	
 	my $from = $self->valid_email($self->Sender || $self->From)
 		|| return $self->error("Could not get valid sender/from address", "MB019");
 	
 	#say who the message is from
 	$server->talk_and_respond("MAIL FROM:<" . $from . ">")
-		|| return $self->error($server->error, $server->errcode);
+		|| return $self->error($server->error, $server->errcode, 'not logged');
 
 	#now, we add this email address to the envelope
 	$server->talk_and_respond("RCPT TO:<" . $email . ">")
-		|| return $self->error($server->error, $server->errcode);
+		|| return $self->error($server->error, $server->errcode, 'not logged');
 		
-	$server->talk_and_respond("DATA")
-		|| return $self->error($server->error, $server->errcode);
-
+	#we build the headers and message body FIRST, to make sure we have them.
+	#that way, we can never send DATA w/o a message and hang the server
 	my $headers = $self->buildHeaders($data) || return undef;
 
 	my $message = $self->buildMessage($data) || return undef;
+
+	$server->talk_and_respond("DATA")
+		|| return $self->error($server->error, $server->errcode, 'not logged');
+
 	$server->talk_and_respond($$headers . $$message) || return undef;
 
 	#make a note of the email address in the log

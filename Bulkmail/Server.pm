@@ -353,6 +353,42 @@ __PACKAGE__->add_attr('_sent_messages_while_awake');
 
 =pod
 
+=item CONVERSATION
+
+This is an optional log file to keep track of your SMTP conversations
+
+CONVERSATION may be either a coderef, globref, arrayref, or string literal.
+
+If a string literal, then Mail::Bulkmail::Server will attempt to open that file (in append mode) as your log:
+
+ $server->CONVERSATION("/path/to/my/conversation");
+ 
+If a globref, it is assumed to be an open filehandle in append mode:
+
+ open (C, ">>/path/to/my/conversation");
+ $server->CONVERSATION(\*C);
+ 
+if a coderef, it is assumed to be a function to call with the address as an argument:
+
+ sub C { print "CONVERSATION : ", $_[1], "\n"};	#or whatever your code is
+ $server->CONVERSATION(\&C);
+ 
+if an arrayref, then the conversation will be pushed on to the end of it
+
+ $server->CONVERSATION(\@conversation);
+ 
+Use whichever item is most convenient, and Mail::Bulkmail::Server will take it from there.
+
+B<Be warned>: This file is going to get B<huge>. Massively huge. You should only turn this on for debugging
+purposes and B<never> in a production environment. It will log the first 50 characters of a message sent to the
+server, and the full server response.
+
+=cut
+
+__PACKAGE__->add_attr(['CONVERSATION',		'_file_accessor'], '>>');
+
+=pod
+
 =item socket
 
 socket contains the socket that this Server has opened to its SMTP relay. You'll probably never talk to this directly,
@@ -605,13 +641,29 @@ sub connect {
 				#first, we'll try to say EHLO
 				print $bulk "EHLO $domain";
 				
-				$response = <$bulk> || "";
-				
+				$response = <$bulk> || "";	
+	
+				#log our conversation, if desired.
+				if ($self->CONVERSATION){
+					$self->logToFile($self->CONVERSATION, "Said to server: 'EHLO'");
+					$self->logToFile($self->CONVERSATION, "\tServer replied: '$response'");
+				};
+
 				#now, if the server didn't respond or gave us an error, we'll fall back and try saying HELO instead
 				if (! $response || $response =~ /^[45]/){
+					
 					$self->error("Server did not respond to EHLO...trying HELO", "MBS016");
+					
 					print $bulk "HELO $domain";
+					
 					$response = <$bulk> || "";
+					
+					#log our conversation, if desired
+					if ($self->CONVERSATION){
+						$self->logToFile($self->CONVERSATION, "Said to server: 'HELO'");
+						$self->logToFile($self->CONVERSATION, "\tServer replied: '$response'");
+					};
+					
 					return $self->error("Server won't say HELO: $response", "MBS005") if ! $response || $response =~ /^[45]/;
 				}
 				#otherwise, it accepted our EHLO, so we'll read in our list of ESMTP options
@@ -620,7 +672,12 @@ sub connect {
 					
 					while ($receiving) {
 						my $r = <$bulk> || "";
-			
+						
+						#log our conversation, if desired
+						if ($self->CONVERSATION){
+							$self->logToFile($self->CONVERSATION, "\tServer replied: '$r'");
+						};
+						
 						$self->error("Server gave an error for EHLO : $r", "MBS011") if ! $r || $r =~ /^[45]/;
 						
 						#extract out and store our ESMTP options for possible later use
@@ -734,6 +791,14 @@ sub talk_and_respond {
 		return $self->error("Cannot talk to server : $!", "MBS007");
 	};
 	
+	#keep track of the first 50 characters, w/o returns for logging purposes
+	my $short_talk = substr($talk, 0, 50);
+	$short_talk .= "...(truncated)" if length $talk > length $short_talk;
+	
+	if ($self->CONVERSATION){
+		$self->logToFile($self->CONVERSATION, "Said to server: '$short_talk'");
+	};
+	
 	my $response = undef;
 	
 	#this is true as long as we're expecting more responses from the server
@@ -750,8 +815,13 @@ sub talk_and_respond {
 
 			my $r = <$bulk> || "";
 
+			if ($self->CONVERSATION){
+				$self->logToFile($self->CONVERSATION, "\tServer replied: '$r'");
+			};
+
 			#500 codes are permanent fatal errors
 			if (! $r || $r =~ /^5/){
+
 				return $self->error("Server won't respond to '$talk' : $r" . $self->Smtp, "MBS008");
 			}
 			
@@ -771,8 +841,15 @@ sub talk_and_respond {
 			
 			#otherwise, if we got a 221, we were disconnected.
 			elsif ($r && $r =~ /^221/){
-				$self->disconnect() if $talk ne 'quit';
-				return $self->error("Server disconnected : $r", "MBS009");
+				#if we disconnected from something other than a quit, then log the error
+				if ($talk ne 'quit'){
+					$self->disconnect();
+					return $self->error("Server disconnected in response to '$talk': $r", "MBS009");
+				}
+				#otherwise, we're happy, so we'll return a true value
+				else {
+					return 'disconnected';
+				};
 			}
 			
 			#finally, if it's something else, then we're gonna assume it's a happy response

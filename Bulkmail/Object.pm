@@ -36,10 +36,16 @@ Go to town. Use it under the artistic license for Mail::Bulkmail use, distribute
 
 =cut
 
-$VERSION = '3.00';
+$VERSION = '3.03';
 
 use Socket;
 use 5.6.0;
+use Data::Dumper ();
+
+sub dump {
+	my $self = shift;
+	return Data::Dumper::Dumper($self);
+};
 
 use strict;
 use warnings;
@@ -572,6 +578,21 @@ Note that error is a special method, and not just a normal accessor or class att
  
 i.e., you will B<not> get a class error message by calling ->error on an object.
 
+There is also an optional third paramenter..."not logged", which sounds horribly ugly, I know. But it is a bit of an
+after-market hack, so it's to be expected. The third argument does what you'd think, it prevents the error message from
+being logged.
+
+ $self->error("This is an error message", "code", "not logged");
+ 
+Any true value may be passed for the 3rd argument, but something that makes it obvious what it's doing is recommended, hence
+my use of 'not logged'. This is useful for bubbling up errors.
+
+ $class->error($self->error, $self->errcode, 'not logged');
+ 
+The reason is that the error was already logged when it was stored in $self. So you'd end up logging it twice in your error
+file, which is very confusing. So it's recommended to use the three argument form for errors that are bubbling up, but not
+elsewhere.
+
 =cut
 
 sub error {
@@ -583,9 +604,10 @@ sub error {
 	if (@_){
 		my $error	= shift;
 		my $code	= shift;
+		my $nolog	= shift || 0;
 		$self->$errormethod($error);
 		$self->$codemethod(defined $code ? $code : undef);
-		$self->logToFile($self->ERRFILE, "error: $error" . (defined $code ? "\tcode : $code" : '')) if $self->ERRFILE && $error;
+		$self->logToFile($self->ERRFILE, "error: $error" . (defined $code ? "\tcode : $code" : '')) if !$nolog && $self->ERRFILE && $error;
 	
 		return undef;
 	}
@@ -817,7 +839,7 @@ sub new {
 
 	return $self->init(
 		@_
-	) || $class->error($self->error, $self->errcode);
+	) || $class->error($self->error, $self->errcode, 'not logged');
 };
 
 =pod
@@ -1001,7 +1023,10 @@ will shift the next line off of @foo and return it.
 
  $obj->getNextLine(\&foo);
  
-will call foo() (with no args) and return whatever the function returns.
+will call foo($obj) and return whatever the function returns.
+
+Note that your bulkmail object is the first argument passed to your function. It's not called as a method, but
+the object is still the first argument passed.
 
 This is mainly used with attribues going through _file_accessor.
 
@@ -1031,7 +1056,7 @@ sub getNextLine {
 		return shift @$list;
 	}
 	elsif (ref $list eq "CODE"){
-		return $list->();
+		return $list->($self);
 	}
 	else {
 		return $self->error("Cannot get next line...don't know what a $list is", "MB046");
@@ -1057,7 +1082,10 @@ will push the value "bar" onto the end of @foo
 
  $obj->logToFile(\&foo, "bar");
  
-will call foo("bar")
+will call foo($obj, "bar")
+
+Note that your bulkmail object is the first argument passed to your function. It's not called as a method, but
+the object is still the first argument passed.
 
 This is mainly used with attribues going through _file_accessor.
 
@@ -1095,7 +1123,7 @@ sub logToFile {
 		return 1;
 	}
 	elsif (ref $file eq "CODE"){
-		$file->($value);
+		$file->($self, $value);
 		return 1;
 	}
 	else {

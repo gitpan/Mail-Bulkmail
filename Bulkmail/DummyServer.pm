@@ -76,7 +76,7 @@ Yes, this thing has a (minimal) implementation of a tied handle class to accompl
 
 This method is known to return
 
- MBDu001 - server won't say HELO
+ MBDu001 - server won't say EHLO
 
 =cut
 
@@ -92,10 +92,10 @@ sub connect {
 	#We're either given a domain, or we'll build it based on who the message is from
 	my $domain = $self->Domain;
 
-	print SOCKET "HELO $domain";
+	print SOCKET "EHLO $domain";
 
 	my $response = <SOCKET> || "";
-	return $self->error("Server won't say HELO: $response", "MBDu001") if ! $response || $response =~ /^[45]/;
+	return $self->error("Server won't say EHLO: $response", "MBDu001") if ! $response || $response =~ /^[45]/;
 
 	$self->connected(1);
 	return $self;

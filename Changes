@@ -1,5 +1,14 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.03 Fri Jan 24, 2003
+	- Fixed a potentially disasterous bug that could cause the system to hang infinitely if there's a severely mal-formed Message
+	- fixed a minor logging error that could cause some errors to be logged twice
+	- DummyServer now says EHLO, to be consistent with Server
+	- if using a coderef for logging/reading, now gets the bulkmail object as its first argument
+	- Mail::Bulkmail::Server now has a CONVERSATION log, to aid in debugging.
+	- Magically fixed another bug in envelope sending. I can't say exactly what it was or how it was fixed or when it manifested itself, but
+	  it was there. (again, many thanks to Tim de Wolf for his continued help in tracking this down)
+
 3.02 Thu Jan 23, 2003
 	- Fixed a bug in envelope sending that I can't believe I managed to allow into the final release.
 	  (many thanks to Tim de Wolf for finding this and helping me isolate it)

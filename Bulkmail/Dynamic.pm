@@ -56,7 +56,7 @@ now, and it functions much better than previous versions did. Faster, more effic
 use Mail::Bulkmail;
 @ISA = qw(Mail::Bulkmail);
 
-$VERSION = "3.02";
+$VERSION = "3.03";
 
 use strict;
 use warnings;
@@ -1101,7 +1101,7 @@ sub buildMessage {
 	
 	#and force a CRLF at the end, unless one is already present
 	$message .= "\015\012" unless $message =~ /\015\012$/;
-	$message .= ".\015\012";
+	$message .= ".";
 	
 	$message = $self->_force_wrap_string($message);
 	

@@ -32,7 +32,6 @@
  #Mail::Bulkmail::Dynamic doesn't care about this value.
  use_envelope    	= 1
 
-
 ####################
 #
 # Now, we'll set values for Mail::Bulkmail::Server
@@ -88,6 +87,9 @@
  #our list of servers
  server_file = /etc/mb/servers.txt
  
+ #we can log the full SMTP conversation. ONLY turn this on for debugging purposes.
+ #this file is going to get HUGE.
+ #CONVERSATION = /etc/mb/conversation.txt
  
 ####################
 #
