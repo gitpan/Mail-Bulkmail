@@ -9,7 +9,7 @@
 BEGIN { $| = 1; print "1..1\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use lib ("../", "../../");
-use Mail::Bulkmail 2.03;
+use Mail::Bulkmail 2.04;
 $loaded = 1;
 print "module loaded, continuing...\n\n";
 
@@ -39,6 +39,8 @@ eval {
 
 sub good {
 	print "Mail successfully sent to (@_)\n";
+	print "\n\nCheck your email account (@_) in a few minutes.  You should have a\n";
+	print "message waiting for you.  If you don't, then something went wrong...\n";
 };
 
 sub bad {
@@ -46,6 +48,8 @@ sub bad {
 	print "    (this is good...'invalid_address' is an internal test case)\n"
 		if join("", @_) =~ /invalid_address/;
 };
+
+print "\n\n=======\nBE SURE TO SET YOUR DEFAULTS IN THE MODULE!!!\n=======\n\n";
 
 print "...error: $@" if $@;
 

@@ -1,5 +1,14 @@
 Revision history for Perl extension Mail::Bulkmail.
 
+2.04  Tues Aug 29, 2000
+	- Added log_full_line flag.  See 'log_full_line', above.
+	- Trusting is now more trusting.
+	- Domains can once again be banned.
+	- Error checking is done less often and in a slightly different order now
+	- ->bulkmail now returns 1 on success.  Doh.
+	- Fixed an annoyingly subtle bug with construction of dynamic messages
+	- Repaired a long-standing bug in the docs.
+
 2.03  Tues Aug 22, 2000
 	- Tweaked the constructor
 	- Enhanced the 'error' method so it can behave as a class method

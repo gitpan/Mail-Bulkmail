@@ -4,13 +4,13 @@ package Mail::Bulkmail;
 #This program is free software; you can redistribute it and/or
 #modify it under the same terms as Perl itself.
 
-$VERSION = "2.03";
+$VERSION = "2.04";
 
 use Socket;
 use 5.004;
 
-use strict;
-$^W = 1;
+#use strict;
+#$^W = 1;
 
 {
 
@@ -24,6 +24,7 @@ $^W = 1;
 	my $def_Subject		= "(no subject)";
 	my $def_Precedence 	= "list";				#list, bulk, or junk
 	my $def_Trusting	= 0;
+	my $def_log_full_line		= 0;
 	my $def_allow_duplicates	= 0;
 	
 	my $def_BMD 		= "::";
@@ -87,6 +88,7 @@ $^W = 1;
 	my $connected 		= Mail::Bulkmail->add_attr();
 	
 	my $Trusting	 	= Mail::Bulkmail->add_attr();
+	my $log_full_line	= Mail::Bulkmail->add_attr();
 	my $error 			= Mail::Bulkmail->add_attr();
 	my $duplicates 		= Mail::Bulkmail->add_attr();
 	my $headers 		= Mail::Bulkmail->add_attr();
@@ -108,7 +110,7 @@ $^W = 1;
 		
 		if (@_){
 			my $email = shift or undef;
-			if ($self->valid_email($email)){
+			if ($self->Trusting || $self->valid_email($email)){
 				$self->[$prop] = $email;
 			}
 			else {
@@ -308,6 +310,12 @@ $^W = 1;
 	sub isBanned {
 		my $self = shift or undef;
 		my $email = shift or return $self->error("Cannot determine banned-ness: No email address");
+		my ($local, $domain) = split(/@/,$email);
+		
+		#first see if the domain is banned
+		return 2 if $self->banned->{lc $domain};
+		
+		#then see if the email address is banned
 		if ($self->safe_banned){
 			return 1 if defined $self->banned->{lc $email};
 		}
@@ -329,6 +337,7 @@ $^W = 1;
 	
 	sub lineterm 		{shift->accessor($lineterm, @_)};
 	sub Trusting 		{shift->accessor($Trusting, @_)};
+	sub log_full_line 	{shift->accessor($log_full_line, @_)};
 	sub connected 		{shift->accessor($connected, @_)};
 	sub Subject 		{shift->accessor($Subject, @_)};
 	sub Message 		{shift->accessor($Message, @_)};
@@ -368,32 +377,32 @@ $^W = 1;
 		
 		my $global_error = undef;
 		sub error {
-				my $self = shift or undef;
-				
-				if (ref $self){
-						if (@_){
-								$self->[$error] = shift or undef;
-								
-								$self->log_it($self->[$error], $self->ERRFILE()) if $self->ERRFILE;
-							   	
-							   	if (@_){
-							my $what = shift or undef;
-							my $where = shift or undef;
+			my $self = shift or undef;
+			
+			if (ref $self){
+				if (@_){
+					$self->[$error] = shift or undef;
+					
+					$self->log_it($self->[$error], $self->ERRFILE()) if $self->ERRFILE;
+				   	
+				   	if (@_){
+						my $what = shift or undef;
+						my $where = shift or undef;
 
-							$self->log_it($what, $where);
-						}; 
-						
-								return undef;
-						}
-						else {return $self->[$error]};
+						$self->log_it($what, $where);
+					}; 
+			
+					return undef;
 				}
-				else {
-						if (@_){
-								$global_error = shift;
-								return undef;
-						}
-						else {return $global_error};
-				};
+				else {return $self->[$error]};
+			}
+			else {
+				if (@_){
+					$global_error = shift;
+					return undef;
+				}
+				else {return $global_error};
+			};
 		};	  #end error
 			
 	};	  #end error wrap up
@@ -414,6 +423,17 @@ $^W = 1;
 			select((select($handle), $| = 1)[0]); 		#Make sure the file is piping hot!
 			
 			local $\ = undef;
+			
+			if (ref $value eq 'ARRAY'){
+				$value = join($self->BMD, @{$value});
+			}
+			elsif (ref $value eq 'HASH'){
+				my $keys   = $self->build_merge_line($self->merge->{"BULK_MAILMERGE"}, $self->BMD); 
+				$value = join($self->BMD, map {$value->{$_}} sort keys %{$value});
+			}
+			elsif (ref $value){
+				$self->error("Don't know how to properly log a " . ref ($value) . " ($value) to a file.");
+			};
 			
 			#get rid of those sendmail-ified carriage returns
 			$value =~ s/\015\012$//g;
@@ -448,6 +468,7 @@ $^W = 1;
 			"Subject"					=> $def_Subject,
 			"Precedence"				=> $def_Precedence,
 			"Trusting"					=> $def_Trusting,
+			"log_full_line"				=> $def_log_full_line,
 			"duplicates" 				=> {},
 			"merge"						=> {},
 			"dynamic"					=> {},
@@ -478,6 +499,7 @@ $^W = 1;
 		
 		$self->ERRFILE		($init{"ERRFILE"}) 	if $init{"ERRFILE"};	#Be sure we can log errors ASAP
 		$self->Trusting		($init{"Trusting"});
+		$self->log_full_line($init{"log_full_line"});
 		
 		$self->From			($init{"From"}) 	or return undef;
 		$self->To			($init{"To"}) 		or return undef;
@@ -524,7 +546,7 @@ $^W = 1;
 		$self->[$headers] = {};
 		
 		#and remove those defaults
-		delete @init{qw(ERRFILE Trusting From To Subject Message merge dynamic 
+		delete @init{qw(ERRFILE Trusting log_full_line From To Subject Message merge dynamic 
 			dynamic_headers Smtp Port Tries Precedence Domain BMD 
 			DMD DMDE DHD DHDE HFM LIST BAD GOOD banned lineterm 
 			safe_banned allow_duplicates use_envelope duplicates banned sort_list)
@@ -770,12 +792,10 @@ sub build_merge_hash {
 	
 	if (defined $self->merge->{"BULK_MAILMERGE"}){
 		{
-			my %temp_hash = %{$self->merge};
-			$merge = \%temp_hash;
+			my %temp_hash = %{$self->merge};	#deref the global hash, and the store a reference to it.  Why?  So we don't
+			$merge = \%temp_hash;				#manipulate the global hash by mistake.
 		};
-		#$merge = \%{$self->merge};	#deref the global hash, and then store a reference to it.  Why?  So we don't manipulate the global hash
-									#by mistake.  Why keep a reference instead of just the hash?  That way, if there's no individual merging
-									#going on, we can just return a ref to the global merge hash.  Cool, huh?  :)
+
 		#print FILE "BUILDING MERGE REFS: $merge, ", $self->merge(), "\n";
 		return $self->error("Cannot use BULK_MAILMERGE with envelope sending") if $self->use_envelope && !$self->Trusting;
 	
@@ -844,9 +864,44 @@ sub build_merge_hash {
 		@$merge{keys %{$local_hash_ref}} = values %{$local_hash_ref};
 	};
 	
-	if (defined $merge){return $merge}
+	if (defined $merge){
+		$merge->{"BULK_LINE"} = $line;
+		return $merge;
+	}
 	else {return $self->merge};
 	
+};
+
+sub validate_address {
+	my $self = shift or undef;
+	my $merge = shift;
+	
+	my $email = ref $merge eq 'HASH' ? $merge->{"BULK_EMAIL"} : $merge;
+	#print "REF MERGE: $merge\n";
+	#print "LINE     : ", $merge->{"BULK_LINE"}, "\n";
+	#print "ALLOWED  : ", $self->log_full_line, "\n"; 
+	my $line = $self->log_full_line ?
+					ref $merge eq 'HASH' 
+						? $merge->{"BULK_LINE"} 
+						: $email 
+					: $email;
+	
+	#no point in continuing if the email is invalid, a duplicate, or banned
+	unless ($self->valid_email($email)){
+		$self->log_it($line, $self->BAD);
+		return $self->error("Invalid address: $email");
+	};
+	
+	if ($self->isDuplicate($email)){
+		return $self->error("Duplicate address: $email");
+	};
+
+	if ($self->isBanned($email)){
+		$self->log_it($line, $self->BAD);
+		return $self->error("Banned address: $email") if $self->isBanned($email);
+	};	
+	
+	return 1;
 };
 
 
@@ -856,6 +911,9 @@ sub mail {
 	my $local_merge = shift or undef;
 	
 	my $merge = $self->build_merge_hash($line, $local_merge) or return undef;
+	
+	return undef unless $self->validate_address($merge or $line);
+
 	$self->build_envelope($merge)			|| return $self->error("Cannot build envelope: " 			. $self->error);
 	$self->send_to_envelope($merge) 		|| return $self->error("Cannot build 'to' in envelope: " 	. $self->error);
 	$self->send_message_data($merge)		|| return $self->error("Cannot transmit data: "  			. $self->error);
@@ -878,16 +936,12 @@ sub bulkmail {
 		#print "LINE: $line(", ref $line, ")\n";
 		
 		my $merge = $self->build_merge_hash($line, $local_merge) or return undef;
-#print "HERE IS THE MERGE THAT I BUILT: $merge\n";
-#print map {"----->($_): " . $merge->{$_} . "\n"} keys %$merge;
+
+		#no point in continuing if the email is invalid, a duplicate, or banned
+		next unless $self->validate_address($merge or $line);
+
 		my $email = $merge->{"BULK_EMAIL"} || $line;
-		
-		unless ($self->valid_email($email)){
-			$self->error("Invalid address: $email");
-			$self->log_it($merge->{"BULK_EMAIL"}, $self->BAD);
-			next;
-		};
-		
+					
 		#open FILE, ">>file.txt";
 		if ($self->use_envelope){
 			
@@ -958,6 +1012,8 @@ sub bulkmail {
 		$self->waiting_message(0);
 	};
 
+	return 1;
+
 };
 
 sub buildMessage {
@@ -1008,9 +1064,7 @@ sub buildMessage {
 
 	@$headers{keys %{$merge->{"DYNAMIC_HEADERS"}}} = values %{$merge->{"DYNAMIC_HEADERS"}};
 
-	return $self->error("Cannot send invalid 'from' address:  (" . $headers->{"From"} . ")") 	unless $self->valid_email($headers->{"From"});
-	return $self->error("Cannot send invalid 'to' address:  (" 	. $headers->{"To"} . ")") 			if $self->use_envelope && ! $self->valid_email($headers->{"To"});
-	return $self->error("Invalid precedence:  (" 				. $headers->{"Precedence"} . ")") 	unless $self->valid_precedence($headers->{"Precedence"});
+	return $self->error("Cannot send with undefined 'to' address:  (" 	. $headers->{"To"} . ")") 			if $self->use_envelope && ! defined $headers->{"To"};
 
 	#build the headers
 	my $message_header = "Date: " . $self->Date . "\015\012";
@@ -1019,6 +1073,7 @@ sub buildMessage {
 			delete $headers->{$header};
 			next;
 		};
+		#print "HEADER: $header\n";
 		$message_header .= "$header: " . $self->scalar_or_code($headers->{$header}) . "\015\012";
 		delete $headers->{$header} if defined $headers->{$header};
 	};
@@ -1053,6 +1108,7 @@ sub buildMessage {
 	
 	foreach my $item (keys %$merge){
 		next if $self->use_envelope && $item eq "BULK_EMAIL";
+		next unless defined $merge->{$item};
 		$message_header =~ s/$item/$self->scalar_or_code($merge->{$item})/ge;
 	};
 	#print FILE "MERGE REFS: $merge, ", $self->merge, "\n";
@@ -1060,14 +1116,18 @@ sub buildMessage {
 	$self->cached_message($message_header) if $self->use_envelope || $merge eq $self->merge; 
 													#no point re-building the message each time if we're using the envelope
 													#or if the merge hash we're building from is the global one
-	
+
+
+
 	return \$message_header;	#actually, message_header + message
 };
 
 sub scalar_or_code {
 	my $self = shift or undef;
-	my $thing = shift or undef;
-	return ref $thing eq "CODE" ? $thing->() : $thing;
+	my $thing = shift or return undef;
+	my $temp = ref $thing eq "CODE" ? $thing->() : $thing;
+	$temp =~ s/(?:\r\n?|\r?\n)/\015\012/g;
+	return $temp;
 };
 
 sub build_envelope {
@@ -1076,10 +1136,10 @@ sub build_envelope {
 #print map {"EMAIL HASH KEYS: ($_): " . $email->{$_} . "\n"} keys %$email;
 	$email = ref $email eq "HASH" ? $email->{"BULK_EMAIL"} : $email;
 #print "CONNECTING\n";
+
 	$self->connect unless $self->connected;
 	return undef unless $self->connected;
 	#print "CONNECTED\n";
-	$self->valid_email($email) || return $self->error("INVALID EMAIL ($email)");
 
 	local $\ = "\015\012";
 	local $/ = "\015\012";
@@ -1118,12 +1178,7 @@ sub send_to_envelope {
 	return $self->error("Not connected!  Cannot send 'to' envelope part") unless $self->connected;
 	
 	$email = ref $email eq "HASH" ? $self->valid_email($email->{"BULK_EMAIL"}) : $self->valid_email($email);
-	
-	$self->valid_email($email) || return undef;
-	
-	return $self->error("Duplicate address: $email") if $self->isDuplicate($email);
-	return $self->error("Banned address: $email") if $self->isBanned($email);
-	
+		
 	$self->setDuplicate($email);
 	#print "\n----\nTO:$email\n----\n";
 	local $\ = "\015\012";
@@ -1180,7 +1235,7 @@ sub send_message_data {
 		return $self->error("Server disconnected: $response");
 	};
 #print "MESSAGE::::SENT DATA\n";
-	$self->log_it($merge->{"BULK_EMAIL"}, $self->GOOD);
+	$self->log_it($self->log_full_line ? $merge->{"BULK_LINE"} : $merge->{"BULK_EMAIL"}, $self->GOOD);
 
 };
 
@@ -1528,9 +1583,52 @@ that you run with this option on, so it's easier to see if anything bad is happe
 
 I<v1.x equivalent>:  ERROR
 
+=item log_full_line
+
+It occurred to me that log_it was only logging the email address of a person.  So if you encounter
+a bad address of, say 'thomasoniii@yahoo', it will log 'thomasoniii@yahoo'.  No problems, right?  But
+what if you're using a mailmerge?  Then things can get tricky.  If your line is, for example, 
+
+ #BULK_MAILMERGE is BULK_EMAIL::NAME::TITLE
+ thomasoniii@yahoo::Jim::Perl Bulkmail Guru
+
+you would only log (in the bad file):
+
+ thomasoniii@yahoo
+
+This may or may not be what you want.  As of v2.04, you have the option of choosing to log the full
+"line" of information.  With log_full_line set to true, this would be in the BAD file:
+
+ thomasoniii@yahoo.com::Jim::Perl Bulkmail Guru
+ 
+Which may come in handy for you, or it may not.  But you at least have the option of doing it.  Why did
+I add this feature?  I was running a list that was extracting information via a SQL query and pulling
+out several pieces of information.  After the message was sent, I neede to perform another query to update
+that information in the table.  Easily done by setting GOOD to a function reference, but that GOOD was only
+receiving the email address back from bulkmail, not the full line of info.  That meant that I had to cache
+the other data in a seperate hash table and then come back to it later.  Most inelegent. This is much better.  :)
+
+There are a couple of "gotchas" when it comes to log_full_line that I haven't quite ironed out to my
+satisfaction yet.  If you have ideas about better ways to handle them, please let me know.
+
+First of all, remember that when logging a full line, you get back exactly what you put in as your "line"
+(recalling that "lines" can be strings, hashes, arrays, codes, etc.)  So if your "line" of information is
+an array (ref), then you'll log that array ref.  Mail::Bulkmail tries to guess about a smart way to log
+the item if it's logging to a text file.  Arrays will be de-referenced and delimited by whatever ->BMD is.
+Hashes will be squashed into their values and delimited by ->BMD.  The keys won't be stored.  Any other reference
+else will give you an error, and then happily log the reference which is probably useless.  Delimited strings
+are logged unchanged.
+
+But this guessing at de-referencing is only done for files.  If you're logging to a function or an 
+array, you're expected to know how to de-reference it yourself.  It'll just be a minor code tweak, don't worry.
+Just be sure to remember it.
+
+log_full_line is set to false by default, but I may set it to true by default in a long-in-the-future release
+(think v2.5 or higher).  I<No v1.x equivalent>
+
 =item banned
 
-U<banned> will allows you to provie a list of banned email addresses or domains.  These are people that
+U<banned> will allows you to provide a list of banned email addresses or domains.  These are people that
 you never B<ever> want to send email to under any circumstances.  People that email you and say "Remove me
 from your mailing list and never email me again!" will go in this category.
 
@@ -1563,8 +1661,8 @@ Why the funky hash format?  One of the screwball, IMHO, things about the email s
 part of an email address is case insensitive, but the local part is case sensitive.  This means that 
 
  thomasoniii@yahoo.com
- thomasoniii@yahoo.com
- thomasoniii@yahoo.com
+ ThomasonIII@yahoo.com
+ tHOMaSoNIii@yahoo.com
  
 all could be different addresses.  So, in theory, you could have those three addresses in your mailing list and
 they're three different people!  Consequently, we need to keep track of exactly how the email address was typed
@@ -1997,7 +2095,7 @@ strings that will be substituted for the values at that location in the line in 
 You may use global merges, BULK_MAILMERGEs and local merges simultaneously.
 
 BULK_MAILMERGEs are declared as delimited by the BMD method (or "::" by default), the data in the actual file
-is also delimited by the BMD method.  The default delimiter is "::", but as of version 2.00, 
+is also delimited by the BMD method.  The default delimiter is "::", but as of version 1.10, 
 you may use BMD to choose any arbitrary delimiter in the file.
 
 For example:
@@ -2224,6 +2322,22 @@ Check the return type of your functions, if it's 0, check ->error to find out wh
 
 =head1 HISTORY
 
+=over 14 2.04 8/29/00
+
+Added log_full_line flag.  See 'log_full_line', above.
+
+Trusting is now more trusting.
+
+Domains can once again be banned.
+
+Error checking is done less often and in a slightly different order now
+
+->bulkmail now returns 1 on success.  Doh.
+
+Fixed an annoyingly subtle bug with construction of dynamic messages
+
+Repaired a long-standing bug in the docs.
+
 =over 14
 
 =item 2.03 8/22/00
@@ -2253,7 +2367,7 @@ alone.  Better safe than sorry.
 
 $self->fmdl is now used to split BULK_FILEMAP
 
-Various fixes suggested by Chris Nandor to make -w shut up.
+Various fixes suggested by Chris Nandor to make B<-w> shut up.
 
 Changed the way to provide local merges to mail and bulkmail so it's more intuitive.
 
@@ -2457,6 +2571,14 @@ I don't know any more, I don't have access to the same gigantic lists I used to 
 Anyway, I'm guesstimating that normal emailing will be about 5-10% slower than before, at most.
 But envelope mailing will be 400+ percent faster.
 
+Well, there's a caveat to that.  I'm estimating that normal emailing the same way you'd use v1.11 will be
+5-10% slower than before.  "normal" means using flat files as your lists.  If you start using functions or
+SQL queries to build your list, then all bets are off.  For instance, one list I'm using now sends to about
+50 people in about 50 seconds (terribly slow).  But it's repeatedly performing a SQL query 'til it gets the
+result it likes, comparing that result against several conditions, deciding to continue, and then completely
+building the message on the fly so every single one is unique.  That's a lot of overhead which slows it down
+quite a bit.  So YMMV, as usual.
+
 Here's the 1.x answer, with 2.00 comments
 
 Really fast.  Really stupendously incredibly fast.
@@ -2552,7 +2674,7 @@ B<So what is it with these version numbers anyway?>
 
 I'm going to I<try> to be consistent in how I number the releases.
 
-The B<hundredths> digit will indicate bug fixes, etc.
+The B<hundredths> digit will indicate bug fixes, minor behind-the-scenes changes, etc.
 
 The B<tenths> digit will indicate new and/or better functionality, as well as some minor new features.
 
@@ -2564,7 +2686,10 @@ If you have x.ac and x.ba comes out, you'll probably want to get it.  Invariably
 release, but it'll also have additional features.  These will be the releases to be sure to read up on to make sure that nothing
 drastic has changes.
 
-If you have x.ac and y.ac comes out, it will be the same as x.ac->x.ba but on a much larger scale.
+If you have x.ac and y.ac comes out, it will be the same as x.ac->x.ba but on a much larger scale.  Judging by the
+amount of revision and improvement between 1.11 and 2.00, there's a very good chance you'll want to look at this
+release.  But, also judging by 1.11->2.00, you'll want to really pour over the docs, since it probably won't be
+backwards compatable and you'll have to fiddle with your script to use it.
 
 B<So what can I expect to see in the future?>
 
@@ -2579,7 +2704,7 @@ Sure, anything you need to know.  Just drop me a message.
 
 =head1 MISCELLANEA
 
-Mail::Bulkmail will automatically set three headers for you.
+Mail::Bulkmail will automatically set three headers for you (well, maybe four).
 
 =over 4
 
@@ -2597,7 +2722,9 @@ The precedence of the message (Precedence:...)
 
 =item 4
 
-Who the message is to (To:....) I<only if using the envelope>
+ Who the message is to (To:....) I<only if using the envelope>
+ (To: will actually always be set, but if not using the envelope it will
+ be set to the individual receiving it)
 
 =back
 
