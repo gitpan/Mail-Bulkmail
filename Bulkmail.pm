@@ -9,7 +9,7 @@ package Mail::Bulkmail;
 
 =head1 NAME
 
-Mail::Bulkmail 3.00 - Platform independent mailing list module
+Mail::Bulkmail 3.01 - Platform independent mailing list module
 
 =head1 AUTHOR
 
@@ -40,7 +40,7 @@ In a nutshell, it allows you to rapidly transmit a message to a mailing list by 
 information to them via an SMTP relay (your own, of course). Subclasses provide the ability to
 use mail merges, dynamic messages, and anything else you can think of.
 
-Mail::Bulkmail 3.00 is a major major B<major> upgrade to the previous version (2.05), which
+Mail::Bulkmail 3.01 is a major major B<major> upgrade to the previous version (2.05), which
 was a major upgrade to the previous version (1.11). My software philosophy is that most code
 should be scrapped and re-written every 6-8 months or so. 2.05 was released in October of 2000, and
 I'm writing these docs for 3.00 in January of 2003. So I'm at least 3 major re-writes behind.
@@ -120,11 +120,10 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = "3.00";
+$VERSION = "3.01";
 
 use Socket;
 use 5.6.0;
-use Data::Dumper ();
 
 use strict;
 use warnings;
@@ -1800,6 +1799,7 @@ This method is known to be able to return:
 
  MB017 - duplicate email
  MB018 - banned email
+ MB019 - invalid sender/from
 
 =cut
 
@@ -1888,9 +1888,12 @@ sub bulkmail {
 				
 				#reset our connection, just to be safe
 				$server->talk_and_respond("RSET") || next;
+
+				my $from = $self->valid_email($self->Sender || $self->From)
+					|| return $self->error("Could not get valid sender/from address", "MB019");
 				
 				#say who the message is from
-				$server->talk_and_respond("MAIL FROM:<" . ($self->Sender() || $self->From()) . ">") || next;
+				$server->talk_and_respond("MAIL FROM:<" . $from . ">") || next;
 				
 			};
 			
@@ -1972,6 +1975,7 @@ you may be able (or required) to pass additional information in your first argum
 This method is known to be able to return:
 
  MB018 - banned email
+ MB019 - invalid sender/from address
 
 =cut
 
@@ -1997,8 +2001,11 @@ sub mail {
 	$server->talk_and_respond("RSET")
 		|| return $self->error($server->error, $server->errcode);
 	
+	my $from = $self->valid_email($self->Sender || $self->From)
+		|| return $self->error("Could not get valid sender/from address", "MB019");
+	
 	#say who the message is from
-	$server->talk_and_respond("MAIL FROM:<" . ($self->Sender() || $self->From()) . ">")
+	$server->talk_and_respond("MAIL FROM:<" . $from . ">")
 		|| return $self->error($server->error, $server->errcode);
 
 	#now, we add this email address to the envelope

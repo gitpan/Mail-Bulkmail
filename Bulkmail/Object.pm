@@ -40,12 +40,6 @@ $VERSION = '3.00';
 
 use Socket;
 use 5.6.0;
-use Data::Dumper ();
-
-sub dump {
-	my $self = shift;
-	return Data::Dumper::Dumper($self);
-};
 
 use strict;
 use warnings;
