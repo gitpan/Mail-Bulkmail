@@ -1,6 +1,6 @@
 package Mail::Bulkmail;
 
-$VERSION = "2.00";
+$VERSION = "2.01";
 
 use Socket;
 use 5.004;
@@ -422,6 +422,8 @@ use 5.004;
 			"Precedence"				=> $def_Precedence,
 			"Trusting"					=> $def_Trusting,
 			"duplicates" 				=> {},
+			"merge"					=> {},
+			"dynamic"				=> {},
 			"banned" 					=> {},
 			"lineterm"					=> $def_lineterm,
 			"BMD"						=> $def_BMD,
@@ -2164,6 +2166,10 @@ Check the return type of your functions, if it's 0, check ->error to find out wh
 =head1 HISTORY
 
 =over 14
+
+=item 2.01 8/16/00
+
+Fixed a *really* stupid error.  Merge hashes and dynamic hashes weren't properly initialized. Damn.
 
 =item 2.00 8/11/00
 

@@ -1,5 +1,8 @@
 Revision history for Perl extension Mail::Bulkmail.
 
+2.01  Wed Aug 16, 2000
+	- Fixed a mindnumblingly dumb bug whereby merge and dynamic hashes weren't initialized.
+
 2.00  Fri Aug 11, 2000
         - Re-wrote everything.  Literally _everything_.  Total re-write.  
         - Added in support for dynamic messaging.
