@@ -56,7 +56,7 @@ now, and it functions much better than previous versions did. Faster, more effic
 use Mail::Bulkmail;
 @ISA = qw(Mail::Bulkmail);
 
-$VERSION = "3.03";
+$VERSION = $Mail::Bulkmail::VERSION;
 
 use strict;
 use warnings;
@@ -857,8 +857,18 @@ sub header {
 	}
 	else {
 		if ($header =~ /^[\x21-\x39\x3B-\x7E]+$/){
-			$self->dynamic_header_data->{$header}->{"_default"} = shift if @_;
-			return $self->dynamic_header_data->{$header}->{"_default"};
+			$self->dynamic_header_data({}) unless defined $self->dynamic_header_data();
+			if (@_){
+				my $val = shift;
+				if (defined $val) {
+					$self->dynamic_header_data->{$header}->{"_default"} = $val;
+					return $val;
+				}
+				else {
+					delete $self->dynamic_header_data->{$header};
+					return 0;
+				};
+			};
 		}
 		else {
 			return $self->error("Cannot set header '$header' : invalid. Headers cannot contain non-printables, spaces, or colons", "MBD016");

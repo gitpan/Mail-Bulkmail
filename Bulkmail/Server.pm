@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = "3.00";
+$VERSION = $Mail::Bulkmail::Object::VERSION;
 
 use Socket;
 use 5.6.0;
@@ -624,7 +624,7 @@ sub connect {
 			eval {
 				local $SIG{"ALRM"} = sub {die "timed out"};
 				
-				alarm($self->time_out) if $self->time_out;
+				eval{ alarm($self->time_out) if $self->time_out; };	#catch it in case alarm isn't implemented (stupid windows)
 				
 				#keep our bulk pipes piping hot.
 				select((select($bulk), $| = 1)[0]);
@@ -693,7 +693,7 @@ sub connect {
 			}; #end eval wrapping up our time out
 		
 			#clear our alarm
-			alarm(0);
+			eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
 			
 			if ($@){
 				return $self->error("Timed out waiting for response on connect", "MBS015");
@@ -809,7 +809,7 @@ sub talk_and_respond {
 
 		local $SIG{"ALRM"} = sub {die "timed out"};
 
-		alarm($self->time_out) if $self->time_out;
+		eval { alarm($self->time_out) if $self->time_out; }; #catch it in case alarm isn't implemented (stupid windows)
 
 		while ($receiving) {
 
@@ -865,7 +865,8 @@ sub talk_and_respond {
 		};	#end while
 	};	#end eval
 
-	alarm(0);	#clear our alarm
+	#clear our alarm
+	eval { alarm(0); }; #catch it in case alarm isn't implemented (stupid windows)
 
 	if ($@){
 		$self->disconnect('quietly');

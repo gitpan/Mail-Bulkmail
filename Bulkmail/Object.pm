@@ -36,7 +36,7 @@ Go to town. Use it under the artistic license for Mail::Bulkmail use, distribute
 
 =cut
 
-$VERSION = '3.03';
+$VERSION = '3.04';
 
 use Socket;
 use 5.6.0;
@@ -643,6 +643,29 @@ sub errcode {
 
 =pod
 
+=item errstring
+
+errstring is just a quick alias for:
+
+ $bulk->error . ": " . $bulk->errcode;
+
+Nothing more.
+
+=cut
+
+sub errstring {
+	my $self = shift;
+	
+	return 
+		(defined $self->error ? $self->error : '')
+		 . "...with code (" . 
+		 (defined $self->errcode ? $self->errcode : '')
+		 . ")";
+		 
+};
+
+=pod
+
 =item read_conf_file
 
 read_conf_file will read in the conf files specified in the @conf_files array up at the top.
@@ -895,10 +918,12 @@ sub init {
 		foreach my $method (keys %{$conf->{$pkg}}){
 			if ($self->can($method)){
 				$self->error(undef);
+				$self->errcode(undef);
 				my $return = $self->$method($conf->{$pkg}->{$method}) if $self->can($method);
-				return $self->error("Could not initilize method ($method) to  value (value is undef)" 
+				my $value = defined $conf->{$pkg}->{$method} ? $conf->{$pkg}->{$method} : 'value is undef';
+				return $self->error("Could not initilize method ($method) to  value ($value)" 
 					. (defined $self->error ? " : " . $self->error : '')
-					, "MBO003"
+					, ($self->errcode || "MBO003")
 				) unless defined $return;
 			};
 		};
@@ -908,10 +933,12 @@ sub init {
 	foreach my $method (keys %init){
 		if ($self->can($method)){
 			$self->error(undef);
+			$self->errcode(undef);
 			my $return = $self->$method($init{$method});
-			return $self->error("Could not initilize method ($method) to  value (value is undef)" 
+			my $value = defined $init{$method} ? $init{$method} : 'value is undef';
+			return $self->error("Could not initilize method ($method) to  value ($value)" 
 				. (defined $self->error ? " : " . $self->error : '')
-				, "MBO004"
+				, ($self->errcode || "MBO004")
 			) unless defined $return;
 		};
 	};

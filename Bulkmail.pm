@@ -9,7 +9,7 @@ package Mail::Bulkmail;
 
 =head1 NAME
 
-Mail::Bulkmail 3.03 - Platform independent mailing list module
+Mail::Bulkmail - Platform independent mailing list module
 
 =head1 AUTHOR
 
@@ -120,7 +120,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = "3.03";
+$VERSION = $Mail::Bulkmail::Object::VERSION;
 
 use Socket;
 use 5.6.0;
@@ -1037,6 +1037,7 @@ This method is known to be able to return:
 
  MB004 - cannot set CC or BCC header
  MB005 - invalid header
+
 =cut
 
 #header allows us to specify additional headers
@@ -1054,8 +1055,15 @@ sub header {
 	}
 	else {
 		if ($header =~ /^[\x21-\x39\x3B-\x7E]+$/){
-			$self->_headers->{$header} = shift if @_;
-			return $self->_headers->{$header};
+			my $value = shift;
+			if (defined $value) {
+				$self->_headers->{$header} = $value;
+				return $value;
+			}
+			else {	
+				delete $self->_headers->{$header};
+				return 0; #non-true value (didn't set it to anything), but a defined value since it's not an error.
+			};
 		}
 		else {
 			return $self->error("Cannot set header '$header' : invalid. Headers cannot contain non-printables, spaces, or colons", "MB005");

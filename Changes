@@ -1,5 +1,22 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.04 Tue Feb 4, 2003
+	- setting a header to undef now deletes it, instead of storing it in the hash as undef.
+	  This wasn't terribly important, since the header wouldn't be set in the message if it
+	  was empty, but it was good for consistency's sake. Also, if you set a header to undef,
+	  the method now returns 0, for a non-true but defined value.
+	- All VERSION numbers now reference the master version number in Mail::Bulkmail::Object
+	- Fixed a bug where trying to call ->header in Mail::Bulkmail::Dynamic w/o using
+	  dynamic_header_data would cause a crash.
+	  (thanks to Justin Simoni for catching this)
+	- added the ->errstring convenience method (in Mail::Bulkmail::Object)
+	- Will now bubble up error codes from methods called at construction instead of replacing
+	  with the default code. Still uses the default codes if one is not passed.
+	- Fixed an obscure error that might have caused a slightly incorrect error message
+	  if there's a failure during construction. 
+	- Wrappered the alarm calls in evals to catch them on systems that don't implement it.
+	  (like some stupid versions of activeperl on windows)
+
 3.03 Fri Jan 24, 2003
 	- Fixed a potentially disasterous bug that could cause the system to hang infinitely if there's a severely mal-formed Message
 	- fixed a minor logging error that could cause some errors to be logged twice
