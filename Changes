@@ -1,7 +1,16 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.12 Mon Dec 22, 2003
+	- headers_from_message would fail under mysterious cirumstances, not all of which have been
+	  explicitly discovered. Should now be resolved (thanks to Eric Litman for bringing this to my
+	  attention)
+	- Under certain conditions, ->bulkmail could hang upon server connect attempt. Basically, Mail::Bulkmail::Server wasn't
+	  always flaggin a server as worthless.  (thanks to Frank Naude for discovering one of these conditions)
+	- in a fit of generousity, Mail::Bulkmail::Object is now distributed under the Artistic License
+
 3.11 Sun Nov 30, 2003
-	- love it when I discover bugs in the test suite! Fixed a potentially fatal bug when sending to domains under certain conditions
+	- love it when I discover bugs in the test suite! Fixed a potentially fatal bug 
+	  when sending to domains under certain conditions
 	  (thanks to Eric Litman for discovering this)
 	- turned off some debugging code that had snuck by me
 	- updated the pod regarding message_from_file to help alleviate a possible PEBKAC issue

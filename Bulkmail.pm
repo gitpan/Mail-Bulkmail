@@ -1,7 +1,7 @@
 package Mail::Bulkmail;
 
 # Copyright and (c) 1999, 2000, 2001, 2002, 2003 James A Thomason III (jim@jimandkoka.com). All rights reserved.
-# Mail::Bulkmail is distributed under the terms of the Perl Artistic License, except for items where otherwise noted.
+# Mail::Bulkmail is distributed under the terms of the Perl Artistic License.
 
 # Mail::Bulkmail is still my baby and shall be supported forevermore.
 
@@ -119,7 +119,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.11';
+$VERSION = '3.12';
 
 use Socket;
 
@@ -447,6 +447,12 @@ sub Message {
 	$self->_cached_message(undef) if @_;
 
 	my @passed = @_;
+	
+	my $needs_header_extraction = 0;
+	
+	if (@passed) {
+		$self->_extracted_headers_from_message(0);
+	};
 
 	if ($self->message_from_file) {
 
@@ -490,8 +496,9 @@ sub Message {
 	$self->_previous_headers_from_message([]);
 
 	#then, if we're setting new headers, we should set them.
-	if ($self->headers_from_message) {
-
+	if ($self->headers_from_message && ! $self->_extracted_headers_from_message) {
+		$self->_extracted_headers_from_message(1);
+		$passed[0] ||= $self->_Message();	#We'll sometimes call this method after setting the message
 		#sendmail-ify our messages newlines
 		$passed[0] =~ s/(?:\r?\n|\r\n?)/\015\012/g;
 
@@ -571,9 +578,9 @@ that your entire message text will be read into memory - no matter how large the
 
 This is simply a shortcut so that you don't have to open and read in the message yourself.
 
-b<NOTE> This is a bit picky, to put it mildly. No doubt you've read that the constructor actually
+B<NOTE> This is a bit picky, to put it mildly. No doubt you've read that the constructor actually
 is taking in its arguments in an array, not a hash. So they're parsed in order, which means you need
-pass in message_from_file u<before> Message. i.e., this will work:
+pass in message_from_file B<before> Message. i.e., this will work:
 
  $bulk = Mail::Bulkmail->new(
  	'message_from_file' => 1,
@@ -621,6 +628,10 @@ any headers specified in the message will be set when you call ->Message.
 =cut
 
 __PACKAGE__->add_attr('headers_from_message');
+
+# internal boolean flag. used to govern whether the headers have already been extracted from
+# the message
+__PACKAGE__->add_attr('_extracted_headers_from_message');
 
 #internal arrayref containing the headers set the last time ->Message was called.
 
@@ -712,7 +723,10 @@ __PACKAGE__->add_attr(['BAD',		'_file_accessor'], '>>');
 
 =item GOOD
 
-This is an optional log file to keep track of the bad addresses you have, i.e. banned, invalid, or duplicates.
+This is an optional log file to keep track of the good addresses you have, i.e. the ones that 
+Mail::Bulkmail could successfully transmit to the server. Note that there is no guarantee that
+an email address in the GOOD file actually received your mailing - it could have failed at a 
+later point when out of Mail::Bulkmail's control.
 
 GOOD may be either a coderef, globref, arrayref, or string literal.
 
@@ -2809,7 +2823,7 @@ Mail::Bulkmail::Object, Mail::Bulkmail::Server, Mail::Bulkmail::Dummy
 =head1 COPYRIGHT (again)
 
 Copyright and (c) 1999, 2000, 2001, 2002, 2003 James A Thomason III (jim@jimandkoka.com). All rights reserved.
-Mail::Bulkmail is distributed under the terms of the Perl Artistic License, except for items where otherwise noted.
+Mail::Bulkmail is distributed under the terms of the Perl Artistic License.
 
 =head1 CONTACT INFO
 

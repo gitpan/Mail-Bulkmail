@@ -45,7 +45,7 @@ ever need to touch this directly.
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = '3.11';
+$VERSION = '3.12';
 
 use Socket;
 use 5.6.0;
@@ -598,7 +598,17 @@ sub connect {
 
 	return $self if $self->connected();
 
-	return $self->error("Cannot connect to server - no Tries parameter set", "MBS017") unless $self->Tries;
+	#if we have no Tries parameter, then the server is unquestionably worthless
+	unless ($self->Tries) {
+		$self->_not_worthless(0);
+		return $self->error("Cannot connect to server - no Tries parameter set", "MBS017");
+	};
+
+	#if we have no Domain, then the server is unquestionably worthless
+	unless ($self->Domain) {
+		$self->_not_worthless(0);
+		return $self->error("Cannot greet server without domain", "MBS010");
+	};
 
 	return $self->error("Cannot connect to worthless servers", "MBS001") unless $self->_not_worthless > 0;
 
@@ -636,10 +646,13 @@ sub connect {
 				local $/ = "\015\012";
 
 				my $response = <$bulk> || "";
-				return $self->error("No response from server: $response", "MBS004") if  ! $response || $response =~ /^[45]/;
+				if (! $response || $response =~ /^[45]/) {
+					$self->_not_worthless($self->_not_worthless - 1);
+					return $self->error("No response from server: $response", "MBS004");
+				};
 
 				#grab our domain
-				my $domain = $self->Domain || return $self->error("Cannot greet server without domain", "MBS010");
+				my $domain = $self->Domain;
 
 				#first, we'll try to say EHLO
 				print $bulk "EHLO $domain";
@@ -667,7 +680,10 @@ sub connect {
 						$self->logToFile($self->CONVERSATION, "\tServer replied: '$response'");
 					};
 
-					return $self->error("Server won't say HELO: $response", "MBS005") if ! $response || $response =~ /^[45]/;
+					if (! $response || $response =~ /^[45]/) {
+						$self->_not_worthless($self->_not_worthless - 1);
+						return $self->error("Server won't say HELO: $response", "MBS005");
+					};
 				}
 				#otherwise, it accepted our EHLO, so we'll read in our list of ESMTP options
 				else {
@@ -701,6 +717,7 @@ sub connect {
 
 
 			if ($@){
+				$self->_not_worthless($self->_not_worthless - 1);
 				return $self->error("Timed out waiting for response on connect", "MBS015");
 			};
 

@@ -1,9 +1,7 @@
 package Mail::Bulkmail::Object;
 
 #Copyright and (c) 1999, 2000, 2001, 2002, 2003 James A Thomason III (jim@jimandkoka.com). All rights reserved.
-#The Mail::Bulkmail::Object component may only be distributed in conjunction with Mail::Bulkmail.
-#Mail::Bulkmail::Object is licensed under the artistic license for the creation classes related to Mail::Bulkmail, or
-#to enable the use and running of those classes.
+#Mail::Bulkmail::Object is distributed under the terms of the Perl Artistic License.
 
 # SCROLL DOWN TO @conf_files ARRAY TO CONFIGURE IT
 
@@ -30,13 +28,9 @@ interface vs. the rest of the system. That'll confuse people and make them unhap
 to be consistent. Of course, you may not like these objects, but they do work well and are consistent. Consistency is
 very important in interface design, IMHO.
 
-The license is a little more restrictive. Basically, you can use it for anything you'd like as long as it's related to
-Mail::Bulkmail. And it must be distributed as a part of the Mail::Bulkmail package, never individually. Otherwise?
-Go to town. Use it under the artistic license for Mail::Bulkmail use, distributed only in conjunction with Mail::Bulkmail.
-
 =cut
 
-$VERSION = '3.11';
+$VERSION = '3.12';
 
 use Socket;
 no warnings 'portable';
@@ -1473,8 +1467,7 @@ Mail::Bulkmail, Mail::Bulkmail::Server
 =head1 COPYRIGHT (again)
 
 Copyright and (c) 1999, 2000, 2001, 2002, 2003 James A Thomason III (jim@jimandkoka.com). All rights reserved.
-Mail::Bulkmail::Object is is licensed under the artistic license for the creation classes related to Mail::Bulkmail, or
-to enable the use and running of those classes.
+Mail::Bulkmail::Object is distributed under the terms of the Perl Artistic License.
 
 =head1 CONTACT INFO
 
