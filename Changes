@@ -1,0 +1,23 @@
+Revision history for Perl extension Mail::Bulkmail.
+
+1.00  Wed Aug 18, 1999 
+        - First public release onto CPAN
+      
+0.93  Thu Aug 12, 1999
+        - Re-vamped the documentation substantially.
+
+0.92  Thu Aug 12, 1999
+        - Started adding a zero in front of the version name, just like I always should have
+        - Changed accessing of non-standard headers so that they have to be accessed and retrieved
+          via the "headset" method.  This is because methods cannot have non-word characters in them.
+          From, Subject, and Precedence headers may also be accessed via headset, if you so choose.
+        - AUTOLOAD now complains loudly (setting ->error and printing to STDERR) if it's called.
+
+.91   Wed Aug 11, 1999
+        - Fixed bugs in setting values which require validation checks.
+        - Fixed accessing of non-standard headers so that the returns are identical
+          to every other accesor method.
+
+.90   Tue Aug 10, 1999
+        - Initial "completed" release.  First release available to general public.
+
