@@ -1,77 +1,107 @@
-Revision history for Perl extension Mail::Bulkmail.
+Revision history for Perl module Mail::Bulkmail.
+
+2.05  Tues Oct 3, 2000
+	- Added envelope_limit accessor.
+	- You can now set more defaults yourself.
+	- Cleaned up the documentation a lot.
+	- Re-wrote the date generation methods.  They're now 5-10%
+	  faster and I fixed an *old* bug causing mail to sometimes
+	  appear to have been sent yesterday, or tomorrow.
+    - Altered logging when using the envelope, see item GOOD, above.
+    - Fixed a bug with undefined values in mailmerges
 
 2.04  Tues Aug 29, 2000
-	- Added log_full_line flag.  See 'log_full_line', above.
+	- Added log_full_line flag.
 	- Trusting is now more trusting.
 	- Domains can once again be banned.
-	- Error checking is done less often and in a slightly different order now
+	- Error checking is done less often and in a slightly 
+	  different order now
 	- ->bulkmail now returns 1 on success.  Doh.
-	- Fixed an annoyingly subtle bug with construction of dynamic messages
+	- Fixed an annoyingly subtle bug with construction of 
+	  dynamic messages
 	- Repaired a long-standing bug in the docs.
 
 2.03  Tues Aug 22, 2000
 	- Tweaked the constructor
-	- Enhanced the 'error' method so it can behave as a class method
+	- Enhanced the 'error' method so it can behave as a 
+	  class method
 	- Enhanced HFM
 	- Enhanced the test suite
 	- various bug fixes
 
 2.01  Wed Aug 16, 2000
-	- Fixed a mindnumblingly dumb bug whereby merge and dynamic hashes weren't initialized.
+	- Fixed a mindnumblingly dumb bug whereby merge and 
+	  dynamic hashes weren't initialized.
 
 2.00  Fri Aug 11, 2000
-        - Re-wrote everything.  Literally _everything_.  Total re-write.  
-        - Added in support for dynamic messaging.
-        - Added in support for envelope sending.
-        - Added in ability to import lists from more sources.
-        - Mail::Bulkmail should now behave absolutely perfectly with -w and use strict.
-        - Did I mention that this is a ground-up re-write?  Your existing code will need
-          to be tweaked slightly to use the new module.
+	- Re-wrote everything.  Literally _everything_.  Total 
+	  re-write.  
+	- Added in support for dynamic messaging.
+	- Added in support for envelope sending.
+	- Added in ability to import lists from more sources.
+	- Mail::Bulkmail should now behave absolutely perfectly 
+	  with -w and use strict.
+	- Did I mention that this is a ground-up re-write?  Your 
+	  existing code will need to be tweaked slightly to use
+	  the new module.
 
 
 1.11  Tue Nov 09, 1999
-        - Banned addresses now checks entire address case
-          insensitively instead of leaving the local part
-          alone. Better safe than sorry.
-        - $self->fmdl is now used to split BULK_FILEMAP
-        - Various fixes suggested by Chris Nandor to make -w
-          shut up.
-        - Changed the way to provide local maps to mail and
-          bulkmail so it's more intuitive.
+	- Banned addresses now checks entire address case 
+	  insensitively instead of leaving the local part
+	  alone. Better safe than sorry.
+	- $self->fmdl is now used to split BULK_FILEMAP
+	- Various fixes suggested by Chris Nandor to make -w 
+	  shut up.
+	- Changed the way to provide local maps to mail and 
+	  bulkmail so it's more intuitive.
 
 1.10  Wed Sep 08, 1999 
-        - Several little fixes.
-        - The module will now re-connect if it receives a 221 (connection terminated) 
-          message from the server.
-        - Fixed a potential near-infinite loop in the _valid_email routine.
-        - _valid_email now merrily strips away comments (even nested ones).  :)
-        - hfm (headers from message) method added.
-        - fmdl (filemap delimiter) method added.
+	- Several little fixes.
+	- The module will now re-connect if it receives a 221 
+	  (connection terminated) message from the server.
+	- Fixed a potential near-infinite loop in the 
+	  _valid_email routine.
+	- _valid_email now merrily strips away comments 
+	  (even nested ones).  :)
+	- hfm (headers from message) method added.
+	- fmdl (filemap delimiter) method added.
 
 1.01  Wed Sep, 01, 1999
-        - Fixed a bug in the email validation routine which would cause the module to hang severely
-          on certain malformed addresses.  All is once again right with the world
-        - Altered default date generation to be RFC 1123 compliant (4 digit year)
-        - changed date generation so that it adds a space after the comman after the day.
-          This is because of a bug in Outlook that wouldn't recognize the date w/o the space.
+	- Fixed a bug in the email validation routine which
+	  would cause the module to hang severely on certain 
+	  malformed addresses.  All is once again right with 
+	  the world.
+	- Altered default date generation to be RFC 1123 
+	  compliant (4 digit year)
+	- changed date generation so that it adds a space after
+	  the comma after the day.  This is because of a bug in 
+	  Outlook that wouldn't recognize the date w/o the space.
 
 1.00  Wed Aug 18, 1999 
-        - First public release onto CPAN
+	- First public release onto CPAN
       
 0.93  Thu Aug 12, 1999
-        - Re-vamped the documentation substantially.
+	- Re-vamped the documentation substantially.
 
 0.92  Thu Aug 12, 1999
-        - Started adding a zero in front of the version name, just like I always should have
-        - Changed accessing of non-standard headers so that they have to be accessed and retrieved
-          via the "headset" method.  This is because methods cannot have non-word characters in them.
-          From, Subject, and Precedence headers may also be accessed via headset, if you so choose.
-        - AUTOLOAD now complains loudly (setting ->error and printing to STDERR) if it's called.
+	- Started adding a zero in front of the version name, 
+	  just like I always should have
+	- Changed accessing of non-standard headers so that they
+	  have to be accessed and retrieved via the "headset" 
+	  method.  This is because methods cannot have non-word 
+	  characters in them.  From, Subject, and Precedence 
+	  headers may also be accessed via headset, if you so 
+	  choose.
+	- AUTOLOAD now complains loudly (setting ->error and 
+	  printing to STDERR) if it's called.
 
 .91   Wed Aug 11, 1999
-        - Fixed bugs in setting values which require validation checks.
-        - Fixed accessing of non-standard headers so that the returns are identical
-          to every other accesor method.
+	- Fixed bugs in setting values which require validation
+	  checks.
+	- Fixed accessing of non-standard headers so that the 
+	  returns are identical to every other accesor method.
 
 .90   Tue Aug 10, 1999
-        - Initial "completed" release.  First release available to general public.
+	- Initial "completed" release.  First release available
+	  to general public.
