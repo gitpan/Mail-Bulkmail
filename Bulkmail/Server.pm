@@ -551,6 +551,7 @@ This method is known to be able to return:
  MBS010 - can't greet server w/o domain
  MBS011 - server gave an error for EHLO
  MBS015 - timed out waiting for response upon connect
+ MBS016 - server didn't respond to EHLO, trying HELO (non-returning error)
 
 =cut
 
@@ -608,6 +609,7 @@ sub connect {
 				
 				#now, if the server didn't respond or gave us an error, we'll fall back and try saying HELO instead
 				if (! $response || $response =~ /^[45]/){
+					$self->error("Server did not respond to EHLO...trying HELO", "MBS016");
 					print $bulk "HELO $domain";
 					$response = <$bulk> || "";
 					return $self->error("Server won't say HELO: $response", "MBS005") if ! $response || $response =~ /^[45]/;

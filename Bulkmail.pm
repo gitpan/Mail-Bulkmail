@@ -9,7 +9,7 @@ package Mail::Bulkmail;
 
 =head1 NAME
 
-Mail::Bulkmail 3.01 - Platform independent mailing list module
+Mail::Bulkmail 3.02 - Platform independent mailing list module
 
 =head1 AUTHOR
 
@@ -21,7 +21,7 @@ Jim Thomason, jim@jimandkoka.com (http://www.jimandkoka.com)
 
  my $bulk = Mail::Bulkmail->new(
 	"LIST" 		=> "~/my.list.txt",
-	"From"		=> "'Jim Thomason'<jim@jimandkoka.com>",
+	"From"		=> '"Jim Thomason"<jim@jimandkoka.com>',
 	"Subject"	=> "This is a test message",
 	"Message"	=> "Here is my test message"
  ) || die Mail::Bulkmail->error();
@@ -40,7 +40,7 @@ In a nutshell, it allows you to rapidly transmit a message to a mailing list by 
 information to them via an SMTP relay (your own, of course). Subclasses provide the ability to
 use mail merges, dynamic messages, and anything else you can think of.
 
-Mail::Bulkmail 3.01 is a major major B<major> upgrade to the previous version (2.05), which
+Mail::Bulkmail 3.00 is a major major B<major> upgrade to the previous version (2.05), which
 was a major upgrade to the previous version (1.11). My software philosophy is that most code
 should be scrapped and re-written every 6-8 months or so. 2.05 was released in October of 2000, and
 I'm writing these docs for 3.00 in January of 2003. So I'm at least 3 major re-writes behind.
@@ -120,7 +120,7 @@ up there for clarities sake. But from a maintenance point of view, spreading it 
 use Mail::Bulkmail::Object;
 @ISA = Mail::Bulkmail::Object;
 
-$VERSION = "3.01";
+$VERSION = "3.02";
 
 use Socket;
 use 5.6.0;
@@ -1292,9 +1292,9 @@ sub _valid_precedence {
 
 given an email address, lowercases the domain. Mainly used internally, but I thought it might be useful externally as well.
 
- print $self->lc_domain("Jim@JimANDKoka.com");	#prints Jim@jimandkoka.com
- print $self->lc_domain("JIM@JIMANDKOKA.com");	#prints JIM@jimandkoka.com
- print $self->lc_domain("jim@jimandkoka.com");	#prints jim@jimandkoka.com
+ print $self->lc_domain('Jim@JimANDKoka.com');	#prints Jim@jimandkoka.com
+ print $self->lc_domain('JIM@JIMANDKOKA.com');	#prints JIM@jimandkoka.com
+ print $self->lc_domain('jim@jimandkoka.com');	#prints jim@jimandkoka.com
 
 This method is known to be able to return:
 
@@ -1661,47 +1661,47 @@ sub buildHeaders {
 		
 		my $email = $self->extractEmail($data);
 		
-		$headers =~ s/^To : ##EMAIL##/To : $email/m;
+		$headers =~ s/^To:##EMAIL##/To:$email/m;
 		
 		return \$headers;
 	};
 	
 	my $headers	= undef;
 	
-	$headers .= "Date : " . $self->Date . "\015\012";
+	$headers .= "Date:" . $self->Date . "\015\012";
 	
 	if (my $from = $self->From){
-		$headers .= "From : " . $from . "\015\012";
+		$headers .= "From:" . $from . "\015\012";
 	}
 	else {
 		return $self->error("Cannot bulkmail...no From address", "MB014");
 	};
 	
-	$headers .= "Subject : " . $self->Subject . "\015\012" if defined $self->Subject && $self->Subject =~ /\S/;
+	$headers .= "Subject:" . $self->Subject . "\015\012" if defined $self->Subject && $self->Subject =~ /\S/;
 
 	#if we're using the envelope, then the To: header is the To attribute
 	if (my $to = $self->use_envelope ? $self->To : "##EMAIL##"){
-		$headers .= "To : $to\015\012";
+		$headers .= "To:$to\015\012";
 	}
 	else {
 		return $self->error("Cannot bulkmail...no To address", "MB015");
 	};
 	
-	$headers .= "Sender : "			. ($self->Sender || $self->From)		. "\015\012";
-	$headers .= "Reply-To : "		. ($self->ReplyTo || $self->From)		. "\015\012";
+	$headers .= "Sender:"			. ($self->Sender || $self->From)		. "\015\012";
+	$headers .= "Reply-To:"		. ($self->ReplyTo || $self->From)		. "\015\012";
 	
 	#we're always going to specify at least a list precedence
-	$headers .= "Precedence : "		. ($self->Precedence || 'list')			. "\015\012";
+	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012";
 		
 	if ($headers_hash->{"Content-type"}){
-		$headers .= "Content-type: " . $headers_hash->{"Content-type"} . "\015\012";
+		$headers .= "Content-type:" . $headers_hash->{"Content-type"} . "\015\012";
 	}
 	else {
 		if ($self->HTML){
-			$headers .= "Content-type: text/html\015\012";
+			$headers .= "Content-type:text/html\015\012";
 		}
 		else {
-			$headers .= "Content-type: text/plain\015\012";
+			$headers .= "Content-type:text/plain\015\012";
 		};
 	};
 	
@@ -1711,13 +1711,13 @@ sub buildHeaders {
 		
 		next if ! defined $h || $h !~ /\S/;
 		
-		$headers .= $header . " : " . $h . "\015\012";
+		$headers .= $header . ":" . $h . "\015\012";
 		
 
 	};
 	
 	# I'm taking credit for the mailing, dammit!
-	$headers .= "X-Bulkmail : " . $Mail::Bulkmail::VERSION . "\015\012";
+	$headers .= "X-Bulkmail:" . $Mail::Bulkmail::VERSION . "\015\012";
 	
 	$headers = $self->_force_wrap_string($headers, 'start with a blank', 'no blank lines');
 	
@@ -1728,7 +1728,7 @@ sub buildHeaders {
 	unless ($self->use_envelope){
 		my $h = $headers;	#can't just use $headers, we'll screw up the ref in _cached_headers
 		my $email = $self->extractEmail($data);
-		$h =~ s/^To : ##EMAIL##/To : $email/m;
+		$h =~ s/^To:##EMAIL##/To:$email/m;
 		return \$h;
 	};
 
@@ -1817,12 +1817,17 @@ sub bulkmail {
 			#if a message is waiting on the previous server, then finish it off
 			if ($self->_waiting_message) {
 
-				$server->talk_and_respond("DATA") || do {$self->_waiting_message(0); next};
+				my $rc = $server->talk_and_respond("DATA");
 				
-				my $headers = $self->buildHeaders($last_data) || do {$self->_waiting_message(0); next};
+				#don't bother sending anything else if it didn't accept data
+				if ($rc){
+					my $headers = $self->buildHeaders($last_data);
 		
-				my $message = $self->buildMessage($last_data) || do {$self->_waiting_message(0); next};
-				$server->talk_and_respond($$headers . $$message) || do {$self->_waiting_message(0); next};
+					my $message = $self->buildMessage($last_data);
+					$server->talk_and_respond($$headers . $$message) if $headers && $message;
+					# we don't care if there's an error here, since it was on the prior message and it should've been
+					# logged
+				};
 						
 				$self->setDuplicate($self->extractEmail($last_data));
 			};
@@ -1865,23 +1870,23 @@ sub bulkmail {
 			#extract the domain from the email address
 			(my $domain = lc $email) =~ s/^[^@]+@//;
 
-			#first, see if this is a new domain, and if so, then finish up what's there
-			if (($self->_cached_domain && $domain ne $self->_cached_domain()) || $server->reached_envelope_limit) {
-
-				#reset that server's envelope counter
-				$server->reset_envelope_counter();
-
-				#so now we want to cache this domain
-				$self->_cached_domain($domain);
+			#first, see if this is a new domain, either the first time through, if it's a different domain than the last
+			#one we saw, or if we reached the server's envelope limit
+			if (! $self->_cached_domain || ($self->_cached_domain && $domain ne $self->_cached_domain()) || $server->reached_envelope_limit) {
 		
 				#if a message is waiting, then finish it off
 				if ($self->_waiting_message) {
-					$server->talk_and_respond("DATA") || do {$self->_waiting_message(0); next};
+					my $rc = $server->talk_and_respond("DATA");
 
-					my $headers = $self->buildHeaders($data) || do {$self->_waiting_message(0); next};
+					#only proceed if it accepted DATA
+					if ($rc){
+						my $headers = $self->buildHeaders($data);
 
-					my $message = $self->buildMessage($data) || do {$self->_waiting_message(0); next};
-					$server->talk_and_respond($$headers . $$message) || do {$self->_waiting_message(0); next};
+						my $message = $self->buildMessage($data);
+						$server->talk_and_respond($$headers . $$message) if $headers && $message;
+						# we don't care if there's an error here, since it was on the prior message and it should've been
+						# logged
+					};
 					
 					$self->_waiting_message(0);
 				};
@@ -1894,6 +1899,15 @@ sub bulkmail {
 				
 				#say who the message is from
 				$server->talk_and_respond("MAIL FROM:<" . $from . ">") || next;
+				
+				#now, since we know that we reset and sent MAIL FROM properly, we'll reset our counter
+				#and cache this domain
+				
+				#reset that server's envelope counter
+				$server->reset_envelope_counter();
+
+				#so now we want to cache this domain
+				$self->_cached_domain($domain);
 				
 			};
 			
@@ -1925,25 +1939,23 @@ sub bulkmail {
 	
 		#and we increment our counters
 		$server->increment_messages_sent();
-	
-#		print "SENDING TO ", $server->Port, "--", $server->Smtp, "--", "\n";
-#		print "\tmessages   : ", $server->_sent_messages(), "\n";
-#		print "\trobins     : ", $server->_sent_messages_this_robin(), "\n";
-#		print "\tconnection : ", $server->_sent_messages_this_connection(), "\n";
-#		print "\tenvelope   : ", $server->_sent_messages_this_envelope(), "\n";
-#		print "\tawake      : ", $server->_sent_messages_while_awake(), "\n";
+
 	};
 
 	#if a message is waiting, then finish it off
 	if ($self->_waiting_message) {
 
-		$server->talk_and_respond("DATA") || return $self->error($server->error, $server->errcode);
+		my $rc = $server->talk_and_respond("DATA");
 		
-		my $headers = $self->buildHeaders($last_data) || return $self->error($server->error, $server->errcode);
+		#don't bother sending anything more if it didn't accept DATA
+		if ($rc){
+			my $headers = $self->buildHeaders($last_data);
 
-		my $message = $self->buildMessage($last_data) || return $self->error($server->error, $server->errcode);
-		$server->talk_and_respond($$headers . $$message) || return $self->error($server->error, $server->errcode);
-				
+			my $message = $self->buildMessage($last_data);
+			$server->talk_and_respond($$headers . $$message) if $headers && $message;
+			# we don't care if there's an error here, since it was on the prior message and it should've been
+			# logged
+		};			
 		$self->setDuplicate($self->extractEmail($last_data));
 		
 		$self->_waiting_message(0);
@@ -2246,8 +2258,9 @@ Sure, anything you need to know.  Just drop me a message.
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com"
+ 	"From"		=> 'me@mydomain.com',
+ 	"To"		=> 'somelist@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com'
  ) || die Mail::Bulkmail->error();
  
  $bulk->bulkmail || die $bulk->error;
@@ -2258,8 +2271,8 @@ Sure, anything you need to know.  Just drop me a message.
  	"LIST" 			=> "./list.txt",
  	"Subject"		=> "A test message",
  	"Message"		=> "This is my test message",
- 	"From"			=> "me@mydomain.com",
- 	"Reply-To"		=> "replies@mydomain.com",
+ 	"From"			=> 'me@mydomain.com',
+ 	"Reply-To"		=> 'replies@mydomain.com',
  	"use_envelope" => 0
  ) || die Mail::Bulkmail->error();
  
@@ -2271,9 +2284,10 @@ Sure, anything you need to know.  Just drop me a message.
  	"LIST" 		=> [qw(test@mydomain.com me@mydomain.com test2@mydomain.com)],
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
- 	"Sender"	=> "sender@mydomain.com"
+ 	"From"		=> 'me@mydomain.com',
+ 	"To"		=> 'somelist@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
+ 	"Sender"	=> 'sender@mydomain.com'
  ) || die Mail::Bulkmail->error();
  
  $bulk->bulkmail || die $bulk->error;
@@ -2289,8 +2303,9 @@ Sure, anything you need to know.  Just drop me a message.
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
+ 	"From"		=> 'me@mydomain.com',
+ 	"To"		=> 'somelist@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
  	"ERRFILE"	=> '/etc/mb/error.file.txt',
  	"servers"	=> [$server]	#our new server
  ) || die Mail::Bulkmail->error();
@@ -2308,8 +2323,9 @@ Sure, anything you need to know.  Just drop me a message.
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
+ 	"From"		=> 'me@mydomain.com',
+ 	"To'		=> 'somelist@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
  	"ERRFILE"	=> '/etc/mb/error.file.txt',
  	"servers"	=> [$dummy_server]	#our new server, which is a dummy server
  ) || die Mail::Bulkmail->error();
@@ -2321,9 +2337,9 @@ Sure, anything you need to know.  Just drop me a message.
  my $bulk = Mail::Bulkmail->new(
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
- 	"Sender"	=> "sender@mydomain.com"
+ 	"From"		=> 'me@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
+ 	"Sender"	=> 'sender@mydomain.com'
  ) || die Mail::Bulkmail->error();
  
  $bulk->mail('test@yourdomain.com') || die $bulk->error;

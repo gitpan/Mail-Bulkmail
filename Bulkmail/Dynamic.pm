@@ -56,7 +56,7 @@ now, and it functions much better than previous versions did. Faster, more effic
 use Mail::Bulkmail;
 @ISA = qw(Mail::Bulkmail);
 
-$VERSION = "3.00";
+$VERSION = "3.02";
 
 use strict;
 use warnings;
@@ -79,7 +79,7 @@ addresses. Mail::Bulkmail::Dynamic has a harder time, since it's usually an emai
  ['jim@jimandkoka.com', "Jim Thomason", "24"]
  or
  {
- 	"BULK_EMAIL" => "jim@jimandkoka.com',
+ 	"BULK_EMAIL" => 'jim@jimandkoka.com',
  	"name"		 => "Jim Thomason",
  	"age"		 => "24"
  }
@@ -938,7 +938,7 @@ sub buildHeaders {
 
 	my $headers = undef;
 
-	$headers .= "Date : " . $self->Date . "\015\012";
+	$headers .= "Date:" . $self->Date . "\015\012";
 	
 	# keep track of the headers that we have set from dynamic_header_data
 	my $set = {};
@@ -953,7 +953,7 @@ sub buildHeaders {
 			
 			$set->{$key}++;
 			
-			$headers .= $key . " : " . $val . "\015\012";
+			$headers .= $key . ":" . $val . "\015\012";
 		};
 	};
 	
@@ -961,36 +961,36 @@ sub buildHeaders {
 	
 	unless ($set->{"From"}){
 		if (my $from = $self->From){
-			$headers .= "From : " . $from . "\015\012";
+			$headers .= "From:" . $from . "\015\012";
 		}
 		else {
 			return $self->error("Cannot bulkmail...no From address", "MBD013");
 		};
 	};
 	
-	$headers .= "Subject : " . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
+	$headers .= "Subject:" . $self->Subject . "\015\012" if ! $set->{"Subject"} && defined $self->Subject && $self->Subject =~ /\S/;
 
 	unless ($set->{"To"}){
 		if (my $to = $self->To){
-			$headers .= "To : $to\015\012";
+			$headers .= "To:$to\015\012";
 		}
 		else {
 			return $self->error("Cannot bulkmail...no To address", "MBD014");
 		};
 	};
 	
-	$headers .= "Sender : "			. ($self->Sender || $self->From)		. "\015\012" unless $set->{"Sender"};
-	$headers .= "Reply-To : "		. ($self->ReplyTo || $self->From)		. "\015\012" unless $set->{"ReplyTo"};
+	$headers .= "Sender:"			. ($self->Sender || $self->From)		. "\015\012" unless $set->{"Sender"};
+	$headers .= "Reply-To:"			. ($self->ReplyTo || $self->From)		. "\015\012" unless $set->{"ReplyTo"};
 	
 	#we're always going to specify at least a list precedence
-	$headers .= "Precedence : "		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};
+	$headers .= "Precedence:"		. ($self->Precedence || 'list')			. "\015\012" unless $set->{"Precedence"};
 		
 	unless ($set->{"Content-type"}){
 		if ($self->HTML){
-			$headers .= "Content-type: text/html\015\012";
+			$headers .= "Content-type:text/html\015\012";
 		}
 		else {
-			$headers .= "Content-type: text/plain\015\012";
+			$headers .= "Content-type:text/plain\015\012";
 		};
 	};
 	#done with our default headers
@@ -1430,8 +1430,8 @@ __END__
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com"
+ 	"From"		=> 'me@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com'
  ) || die Mail::Bulkmail::Dynamic->error();
  
  $bulk->bulkmail || die $bulk->error;
@@ -1446,8 +1446,8 @@ __END__
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message just for you. And your name is NAME.",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
+ 	"From"		=> 'me@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
  	"merge_keys" => [qw(BULK_EMAIL NAME)]
  ) || die Mail::Bulkmail::Dynamic->error();
  
@@ -1463,8 +1463,8 @@ __END__
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message. And here's something personalized for you : personal_message",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
+ 	"From"		=> 'me@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
  	"merge_keys" => [qw(BULK_EMAIL NAME)],
  	"dynamic_message_data" => {
  		"message" => {
@@ -1487,8 +1487,8 @@ __END__
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message. And here's something personalized for you : personal_message. addendum",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
+ 	"From"		=> 'me@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
  	"merge_keys" => [qw(BULK_EMAIL NAME)],
  	"dynamic_message_data" => {
  		"message" => {
@@ -1516,8 +1516,8 @@ __END__
  	"LIST" 		=> "./list.txt",
  	"Subject"	=> "A test message",
  	"Message"	=> "This is my test message. And here's something personalized for you : personal_message. addendum",
- 	"From"		=> "me@mydomain.com",
- 	"Reply-To"	=> "replies@mydomain.com",
+ 	"From"		=> 'me@mydomain.com',
+ 	"Reply-To"	=> 'replies@mydomain.com',
  	"merge_keys" => [qw(BULK_EMAIL NAME)],
  	"dynamic_message_data" => {
  		"message" => {

@@ -1,9 +1,18 @@
 Revision history for Perl module Mail::Bulkmail.
 
+3.02 Thu Jan 23, 2003
+	- Fixed a bug in envelope sending that I can't believe I managed to allow into the final release.
+	  (many thanks to Tim de Wolf for finding this and helping me isolate it)
+	- fixed some documentation errors in the examples
+	- now logs to ERRFILE if the server didn't accept an EHLO
+	- doesn't skip current email address if there's an error on the previous one
+	- fixed a ridiculously obscure bug that could manifest with an invalid Sender
+	- headers weren't *quite* RFC 2822 compliant (they were still valid RFC 822)
+
 3.01 Thu Jan 23, 2003
 
 	- Fixed an annoylingly old bug in setting the envelope header which could
-	  cause an invalid address to be sent
+	  cause an invalid address to be sent (thanks to Joseph Brown for identifying this)
 	- removed the debugging routine that required Data::Dumper
 
 3.00 Mon Jan 20, 2003
